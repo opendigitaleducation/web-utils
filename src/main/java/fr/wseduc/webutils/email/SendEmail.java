@@ -16,11 +16,12 @@
 
 package fr.wseduc.webutils.email;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 import java.util.List;
 
@@ -32,26 +33,26 @@ public interface SendEmail {
 
 	void sendEmail(HttpServerRequest request, String to, String cc, String bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 	void sendEmail(HttpServerRequest request, String to, String cc, String bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, JsonArray headers, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, JsonArray headers, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 	void sendEmail(HttpServerRequest request, String to, String from, String cc, String bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 	void sendEmail(HttpServerRequest request, String to, String from, String cc, String bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, JsonArray headers, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, JsonArray headers, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 	void sendEmail(HttpServerRequest request, List<Object> to, List<Object> cc, List<Object> bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 	void sendEmail(HttpServerRequest request, List<Object> to, String from, List<Object> cc, List<Object> bcc,
 						  String subject, String templateBody, JsonObject templateParams,
-						  boolean translateSubject, JsonArray headers, final Handler<Message<JsonObject>> handler);
+						  boolean translateSubject, JsonArray headers, final Handler<AsyncResult<Message<JsonObject>>> handler);
 
 }

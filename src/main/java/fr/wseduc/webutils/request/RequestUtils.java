@@ -19,16 +19,15 @@ package fr.wseduc.webutils.request;
 import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.security.XSSUtils;
 import fr.wseduc.webutils.validation.JsonSchemaValidator;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.AsyncResultHandler;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -77,22 +76,19 @@ public class RequestUtils {
 			public void handle(Buffer event) {
 				try {
 					final JsonObject json = new JsonObject(XSSUtils.stripXSS(event.toString("UTF-8")));
-					validator.validate(schema, json, new AsyncResultHandler<Message<JsonObject>>() {
-						@Override
-						public void handle(AsyncResult<Message<JsonObject>> event) {
-							if (event.succeeded()) {
-								if ("ok".equals(event.result().body().getString("status"))) {
-									handler.handle(json);
-								} else {
-									log.debug(event.result().body().getString("message"));
-									log.debug(event.result().body()
-											.getArray("report", new JsonArray()).encodePrettily());
-									Renders.badRequest(request, event.result().body().getString("error"));
-								}
+					validator.validate(schema, json, event1 -> {
+						if (event1.succeeded()) {
+							if ("ok".equals(event1.result().body().getString("status"))) {
+								handler.handle(json);
 							} else {
-								log.error("Validate async error.", event.cause());
-								Renders.badRequest(request, event.cause().getMessage());
+								log.debug(event1.result().body().getString("message"));
+								log.debug(event1.result().body()
+										.getJsonArray("report", new JsonArray()).encodePrettily());
+								Renders.badRequest(request, event1.result().body().getString("error"));
 							}
+						} else {
+							log.error("Validate async error.", event1.cause());
+							Renders.badRequest(request, event1.cause().getMessage());
 						}
 					});
 				} catch (RuntimeException e) {

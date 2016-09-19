@@ -16,11 +16,12 @@
 
 package fr.wseduc.webutils.security.oauth;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
 
@@ -37,27 +38,32 @@ public class DefaultOAuthResourceProvider implements OAuthResourceProvider {
 	public void validToken(final SecureHttpServerRequest request, final Handler<Boolean> handler) {
 		JsonObject headers = new JsonObject();
 		for (String name : request.headers().names()) {
-			headers.putString(name, request.headers().get(name));
+			headers.put(name, request.headers().get(name));
 		}
 		JsonObject params = new JsonObject();
 		for (String name : request.params().names()) {
-			params.putString(name, request.params().get(name));
+			params.put(name, request.params().get(name));
 		}
 		JsonObject json = new JsonObject()
-		.putObject("headers", headers)
-		.putObject("params", params);
+		.put("headers", headers)
+		.put("params", params);
 		request.pause();
-		eb.send(OAUTH_ADDRESS, json, new Handler<Message<JsonObject>>() {
+		eb.send(OAUTH_ADDRESS, json, new Handler<AsyncResult<Message<JsonObject>>>() {
 
 			@Override
-			public void handle(Message<JsonObject> res) {
-				request.resume();
-				if ("ok".equals(res.body().getString("status"))) {
-					request.setAttribute("client_id", res.body().getString("client_id"));
-					request.setAttribute("remote_user", res.body().getString("remote_user"));
-					request.setAttribute("scope", res.body().getString("scope"));
-					request.setAttribute("authorization_type", "Bearer");
-					handler.handle(customValidation(request));
+			public void handle(AsyncResult<Message<JsonObject>> event) {
+				if (event.succeeded()) {
+					Message<JsonObject> res = event.result();
+					request.resume();
+					if ("ok".equals(res.body().getString("status"))) {
+						request.setAttribute("client_id", res.body().getString("client_id"));
+						request.setAttribute("remote_user", res.body().getString("remote_user"));
+						request.setAttribute("scope", res.body().getString("scope"));
+						request.setAttribute("authorization_type", "Bearer");
+						handler.handle(customValidation(request));
+					} else {
+						handler.handle(false);
+					}
 				} else {
 					handler.handle(false);
 				}

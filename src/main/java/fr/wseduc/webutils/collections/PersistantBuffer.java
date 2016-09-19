@@ -17,13 +17,14 @@
 package fr.wseduc.webutils.collections;
 
 import fr.wseduc.webutils.DefaultAsyncResult;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.file.AsyncFile;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.file.AsyncFile;
+import io.vertx.core.file.OpenOptions;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import java.io.File;
 import java.util.HashSet;
@@ -42,12 +43,12 @@ public class PersistantBuffer {
 	private Handler<Throwable> exceptionHandler;
 	private boolean persisted = false;
 	private boolean lock = false;
-	private Buffer tmp = new Buffer();
+	private Buffer tmp = Buffer.buffer();
 	private Set<Handler<AsyncResult<Buffer>>> waitGet = new HashSet<>();
 	private AsyncFile f;
 
 	public PersistantBuffer(Vertx vertx) {
-		this(vertx, new Buffer());
+		this(vertx, Buffer.buffer());
 	}
 
 	public PersistantBuffer(Vertx vertx, Buffer buffer) {
@@ -92,7 +93,7 @@ public class PersistantBuffer {
 				writeLength += buffer.length();
 				buffer = tmp;
 				lock = false;
-				tmp = new Buffer();
+				tmp = Buffer.buffer();
 				if (handler != null) {
 					handler.handle(ar);
 				}
@@ -111,7 +112,8 @@ public class PersistantBuffer {
 			if (f != null) {
 				writeFile(h);
 			} else {
-				vertx.fileSystem().open(filePath, null, false, true, false, new Handler<AsyncResult<AsyncFile>>() {
+				OpenOptions options = new OpenOptions().setRead(false).setCreateNew(false).setWrite(true);
+				vertx.fileSystem().open(filePath, options, new Handler<AsyncResult<AsyncFile>>() {
 					@Override
 					public void handle(AsyncResult<AsyncFile> ar) {
 						if (ar.succeeded()) {
@@ -206,8 +208,8 @@ public class PersistantBuffer {
 
 	public void clear() {
 		removeFile();
-		buffer = new Buffer();
-		tmp = new Buffer();
+		buffer = Buffer.buffer();
+		tmp = Buffer.buffer();
 		length = 0;
 		writeLength = 0;
 		persisted = false;

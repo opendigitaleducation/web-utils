@@ -16,10 +16,10 @@
 
 package fr.wseduc.webutils.data;
 
-import org.vertx.java.core.json.impl.Base64;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -68,11 +68,11 @@ public class ZLib {
 	}
 
 	public static String compressAndEncode(String data) throws IOException {
-		return Base64.encodeBytes(compress(data.getBytes()), Base64.DONT_BREAK_LINES);
+		return Base64.getEncoder().encodeToString(compress(data.getBytes()));
 	}
 
 	public static String deflateAndEncode(String data) throws IOException {
-		return Base64.encodeBytes(deflate(data.getBytes()), Base64.DONT_BREAK_LINES);
+		return Base64.getEncoder().encodeToString(deflate(data.getBytes()));
 	}
 
 }

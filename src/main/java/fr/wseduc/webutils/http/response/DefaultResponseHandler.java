@@ -18,10 +18,10 @@ package fr.wseduc.webutils.http.response;
 
 import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.http.Renders;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class DefaultResponseHandler {
 
@@ -41,7 +41,7 @@ public class DefaultResponseHandler {
 					Renders.renderJson(request, event.right().getValue(), successCode);
 				} else {
 					JsonObject error = new JsonObject()
-							.putString("error", event.left().getValue());
+							.put("error", event.left().getValue());
 					Renders.renderJson(request, error, 400);
 				}
 			}
@@ -57,7 +57,7 @@ public class DefaultResponseHandler {
 					Renders.renderJson(request, event.right().getValue());
 				} else {
 					JsonObject error = new JsonObject()
-							.putString("error", event.left().getValue());
+							.put("error", event.left().getValue());
 					Renders.renderJson(request, error, 400);
 				}
 			}

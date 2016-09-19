@@ -22,15 +22,13 @@ import java.util.Locale;
 import java.util.Map;
 
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.DecodeException;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
-import org.vertx.java.platform.Container;
-
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class I18n {
 
@@ -50,18 +48,18 @@ public class I18n {
 		return I18nHolder.instance;
 	}
 
-	public void init(Container container, Vertx vertx) {
+	public void init(Vertx vertx) {
 		try {
-			if (vertx.fileSystem().existsSync(messagesDir)) {
+			if (vertx.fileSystem().existsBlocking(messagesDir)) {
 				Map<Locale, JsonObject> messages = messagesByDomains.get(DEFAULT_DOMAIN);
 				if (messages == null) {
 					messages = new HashMap<>();
 					messagesByDomains.put(DEFAULT_DOMAIN, messages);
 				}
-				for(String path : vertx.fileSystem().readDirSync(messagesDir)) {
-					if (vertx.fileSystem().propsSync(path).isRegularFile()) {
+				for(String path : vertx.fileSystem().readDirBlocking(messagesDir)) {
+					if (vertx.fileSystem().propsBlocking(path).isRegularFile()) {
 						Locale l = Locale.forLanguageTag(new File(path).getName().split("\\.")[0]);
-						JsonObject jo = new JsonObject(vertx.fileSystem().readFileSync(path).toString());
+						JsonObject jo = new JsonObject(vertx.fileSystem().readFileBlocking(path).toString());
 						messages.put(l,jo);
 					}
 				}
@@ -146,11 +144,11 @@ public class I18n {
 				request.headers().get("Accept-Language") : "fr";
 		if (request instanceof SecureHttpServerRequest) {
 			JsonObject session = ((SecureHttpServerRequest) request).getSession();
-			if (session != null && session.getObject("cache") != null &&
-					session.getObject("cache").getObject("preferences") != null &&
-					Utils.isNotEmpty(session.getObject("cache").getObject("preferences").getString("language"))) {
+			if (session != null && session.getJsonObject("cache") != null &&
+					session.getJsonObject("cache").getJsonObject("preferences") != null &&
+					Utils.isNotEmpty(session.getJsonObject("cache").getJsonObject("preferences").getString("language"))) {
 				try {
-					JsonObject language = new JsonObject(session.getObject("cache").getObject("preferences")
+					JsonObject language = new JsonObject(session.getJsonObject("cache").getJsonObject("preferences")
 							.getString("language"));
 					return language.getString(DEFAULT_DOMAIN, acceptLanguage);
 				} catch (DecodeException e) {
@@ -172,7 +170,7 @@ public class I18n {
 			HashMap<Locale, JsonObject> defaultMessages = (HashMap<Locale, JsonObject>)
 					messagesByDomains.get(DEFAULT_DOMAIN);
 			if (defaultMessages == null) return;
-			messages = new HashMap<Locale, JsonObject>();
+			messages = new HashMap<>();
 			for(Locale l : defaultMessages.keySet()){
 				messages.put(l, defaultMessages.get(l).copy());
 			}
@@ -191,7 +189,7 @@ public class I18n {
 		final JsonArray languages = new JsonArray();
 		if (messages != null) {
 			for (Locale l : messages.keySet()) {
-				languages.addString(l.getLanguage());
+				languages.add(l.getLanguage());
 			}
 		}
 		return languages;

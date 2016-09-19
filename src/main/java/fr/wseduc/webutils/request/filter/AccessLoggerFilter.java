@@ -17,9 +17,8 @@
 package fr.wseduc.webutils.request.filter;
 
 import fr.wseduc.webutils.request.AccessLogger;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.http.HttpServerRequest;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
 
 public class AccessLoggerFilter implements Filter {
 
@@ -31,9 +30,9 @@ public class AccessLoggerFilter implements Filter {
 
 	@Override
 	public void canAccess(HttpServerRequest request, final Handler<Boolean> handler) {
-		accessLogger.log(request, new VoidHandler() {
+		accessLogger.log(request, new Handler<Void>() {
 			@Override
-			protected void handle() {
+			public void handle(Void v) {
 				handler.handle(true);
 			}
 		});

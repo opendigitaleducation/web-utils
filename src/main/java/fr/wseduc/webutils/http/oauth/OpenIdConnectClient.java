@@ -17,12 +17,12 @@
 package fr.wseduc.webutils.http.oauth;
 
 import fr.wseduc.webutils.security.JWT;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -56,7 +56,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 			@Override
 			public void handle(JsonObject res) {
 				if ("ok".equals(res.getString("status"))) {
-					final JsonObject token = res.getObject("token");
+					final JsonObject token = res.getJsonObject("token");
 					if (token == null) {
 						log.error("invalid token");
 						handler.handle(null);
@@ -77,7 +77,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 								handler.handle(null);
 								return;
 							}
-							payload.putString("id_token_hint", idToken);
+							payload.put("id_token_hint", idToken);
 							if (isNotEmpty(userInfoUrn)) {
 								getUserInfo(token.getString("access_token"), payload, handler);
 							} else {

@@ -16,23 +16,20 @@
 
 package fr.wseduc.webutils.security;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.MultiMap;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpServerFileUpload;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.HttpServerResponse;
-import org.vertx.java.core.http.HttpVersion;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.net.NetSocket;
+import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.*;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.SocketAddress;
 
 public class SecureHttpServerRequest implements HttpServerRequest {
 
@@ -45,12 +42,6 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	public SecureHttpServerRequest(HttpServerRequest request) {
 		this.request = request;
 		this.attributes = new HashMap<>();
-	}
-
-	@Override
-	public HttpServerRequest dataHandler(Handler<Buffer> handler) {
-		request.dataHandler(handler);
-		return this;
 	}
 
 	@Override
@@ -92,13 +83,33 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
+	public HttpServerRequest handler(Handler<Buffer> handler) {
+		return request.handler(handler);
+	}
+
+	@Override
 	public HttpVersion version() {
 		return request.version();
 	}
 
 	@Override
-	public String method() {
+	public HttpMethod method() {
 		return request.method();
+	}
+
+	@Override
+	public String rawMethod() {
+		return request.rawMethod();
+	}
+
+	@Override
+	public boolean isSSL() {
+		return request.isSSL();
+	}
+
+	@Override
+	public String scheme() {
+		return request.scheme();
 	}
 
 	@Override
@@ -117,6 +128,11 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
+	public String host() {
+		return request.host();
+	}
+
+	@Override
 	public HttpServerResponse response() {
 		return request.response();
 	}
@@ -127,18 +143,38 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
+	public String getHeader(String headerName) {
+		return request.getHeader(headerName);
+	}
+
+	@Override
+	public String getHeader(CharSequence headerName) {
+		return request.getHeader(headerName);
+	}
+
+	@Override
 	public MultiMap params() {
 		return request.params();
 	}
 
 	@Override
-	public InetSocketAddress remoteAddress() {
+	public String getParam(String paramName) {
+		return request.getParam(paramName);
+	}
+
+	@Override
+	public SocketAddress remoteAddress() {
 		return request.remoteAddress();
 	}
 
 	@Override
-	public InetSocketAddress localAddress() {
+	public SocketAddress localAddress() {
 		return request.localAddress();
+	}
+
+	@Override
+	public SSLSession sslSession() {
+		return request.sslSession();
 	}
 
 	@Override
@@ -147,8 +183,8 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
-	public URI absoluteURI() {
-		return request.absoluteURI();
+	public String absoluteURI() {
+		return null;
 	}
 
 	@Override
@@ -177,9 +213,14 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
-	public HttpServerRequest expectMultiPart(boolean expect) {
-		request.expectMultiPart(expect);
+	public HttpServerRequest setExpectMultipart(boolean expect) {
+		request.setExpectMultipart(expect);
 		return this;
+	}
+
+	@Override
+	public boolean isExpectMultipart() {
+		return request.isExpectMultipart();
 	}
 
 	@Override
@@ -191,6 +232,31 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 	@Override
 	public MultiMap formAttributes() {
 		return request.formAttributes();
+	}
+
+	@Override
+	public String getFormAttribute(String attributeName) {
+		return request.getFormAttribute(attributeName);
+	}
+
+	@Override
+	public ServerWebSocket upgrade() {
+		return request.upgrade();
+	}
+
+	@Override
+	public boolean isEnded() {
+		return request.isEnded();
+	}
+
+	@Override
+	public HttpServerRequest customFrameHandler(Handler<HttpFrame> handler) {
+		return request.customFrameHandler(handler);
+	}
+
+	@Override
+	public HttpConnection connection() {
+		return request.connection();
 	}
 
 	public JsonObject getSession() {

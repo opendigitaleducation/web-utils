@@ -21,9 +21,9 @@ import java.util.List;
 
 import fr.wseduc.webutils.request.AccessLogger;
 import fr.wseduc.webutils.security.XssSecuredHttpServerRequest;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.http.HttpServerRequest;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerRequest;
 
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
 /*

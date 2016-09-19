@@ -17,12 +17,13 @@
 package fr.wseduc.webutils.email;
 
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.platform.Container;
+import fr.wseduc.webutils.DefaultAsyncResult;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 
 import java.io.UnsupportedEncodingException;
 
@@ -31,25 +32,23 @@ public class BusMailSender extends NotificationHelper {
 	protected String emailAddress;
 	private final EventBus eb;
 
-	protected BusMailSender(Vertx vertx, Container container) {
-		this(vertx, container, null);
+	protected BusMailSender(Vertx vertx, JsonObject config) {
+		this(vertx, config, null);
 	}
 
-	public BusMailSender(Vertx vertx, Container container, String emailAddress) {
-		super(vertx, container);
+	public BusMailSender(Vertx vertx, JsonObject config, String emailAddress) {
+		super(vertx, config);
 		this.eb = vertx.eventBus();
 		this.emailAddress = emailAddress;
 	}
 
-	protected void sendEmail(JsonObject json, Handler<Message<JsonObject>> handler) {
+	protected void sendEmail(JsonObject json, Handler<AsyncResult<Message<JsonObject>>> handler) {
 		try {
-			json.putString("body", new String(json.getString("body").getBytes("UTF-8"), "ISO-8859-1"));
+			json.put("body", new String(json.getString("body").getBytes("UTF-8"), "ISO-8859-1"));
 			eb.send(emailAddress, json, handler);
 		} catch (UnsupportedEncodingException e) {
 			log.error(e.getMessage(), e);
-			Message<JsonObject> m = new ErrorMessage();
-			m.body().putString("error", e.getMessage());
-			handler.handle(m);
+			handler.handle(new DefaultAsyncResult<>(e));
 		}
 	}
 

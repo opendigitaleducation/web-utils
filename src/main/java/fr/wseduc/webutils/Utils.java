@@ -16,11 +16,11 @@
 
 package fr.wseduc.webutils;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.MultiMap;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 import java.io.InputStream;
 import java.util.List;
@@ -51,12 +51,12 @@ public class Utils {
 				List<String> requiredFields) {
 		if (json != null) {
 			JsonObject e = json.copy();
-			for (String attr: json.getFieldNames()) {
+			for (String attr: json.fieldNames()) {
 				if (!fields.contains(attr) || e.getValue(attr) == null) {
-					e.removeField(attr);
+					e.remove(attr);
 				}
 			}
-			if (e.toMap().keySet().containsAll(requiredFields)) {
+			if (e.getMap().keySet().containsAll(requiredFields)) {
 				return e;
 			}
 		}
@@ -65,10 +65,10 @@ public class Utils {
 
 	public static Either<String, JsonObject> validResult(Message<JsonObject> res) {
 		if ("ok".equals(res.body().getString("status"))) {
-			JsonObject r = res.body().getObject("result");
+			JsonObject r = res.body().getJsonObject("result");
 			if (r == null) {
 				r = res.body();
-				r.removeField("status");
+				r.remove("status");
 			}
 			return new Either.Right<>(r);
 		} else {
@@ -78,7 +78,7 @@ public class Utils {
 
 	public static Either<String, JsonArray> validResults(Message<JsonObject> res) {
 		if ("ok".equals(res.body().getString("status"))) {
-			return new Either.Right<>(res.body().getArray("results", new JsonArray()));
+			return new Either.Right<>(res.body().getJsonArray("results", new JsonArray()));
 		} else {
 			return new Either.Left<>(res.body().getString("message", ""));
 		}
@@ -89,7 +89,7 @@ public class Utils {
 		JsonObject json = new JsonObject();
 		if (attributes != null) {
 			for (Map.Entry<String, String> e: attributes.entries()) {
-				json.putString(e.getKey(), e.getValue());
+				json.put(e.getKey(), e.getValue());
 			}
 		}
 		return json;

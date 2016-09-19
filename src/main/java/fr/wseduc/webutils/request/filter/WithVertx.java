@@ -16,7 +16,7 @@
 
 package fr.wseduc.webutils.request.filter;
 
-import org.vertx.java.core.Vertx;
+import io.vertx.core.Vertx;
 
 public interface WithVertx {
 

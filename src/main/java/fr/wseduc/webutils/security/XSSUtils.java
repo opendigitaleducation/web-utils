@@ -16,7 +16,7 @@
 
 package fr.wseduc.webutils.security;
 
-import org.vertx.java.core.MultiMap;
+import io.vertx.core.MultiMap;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -18,16 +18,17 @@ package fr.wseduc.webutils.request.filter;
 
 
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.impl.Base64;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
+
+import java.util.Base64;
 
 public abstract class AbstractBasicFilter {
 
 	public void validate(final SecureHttpServerRequest request, final Handler<Boolean> handler) {
 		String authorization = request.headers().get("Authorization");
 		if (authorization != null && authorization.startsWith("Basic ")) {
-			String credentials = new String(Base64.decode(authorization.substring(6)));
+			String credentials = new String(Base64.getDecoder().decode(authorization.substring(6)));
 			final String[] c = credentials.split(":");
 			if (c.length == 2) {
 				request.pause();

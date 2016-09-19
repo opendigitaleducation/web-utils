@@ -24,12 +24,12 @@ import fr.wseduc.webutils.security.oauth.OAuthResourceProvider;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
-import org.vertx.java.core.shareddata.ConcurrentSharedMap;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.shareddata.LocalMap;
 
 public class UserAuthFilter implements Filter, WithVertx {
 
@@ -87,9 +87,9 @@ public class UserAuthFilter implements Filter, WithVertx {
 				location = location.split(":")[0] + ":8009";
 			}
 			callBack = URLEncoder.encode(callBack, "UTF-8");
-			ConcurrentSharedMap<Object, Object> confServer = null;
+			LocalMap<Object, Object> confServer = null;
 			if (vertx != null) {
-				confServer = vertx.sharedData().getMap("server");
+				confServer = vertx.sharedData().getLocalMap("server");
 			}
 			String loginUri = null;
 			if (confServer != null) {

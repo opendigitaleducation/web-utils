@@ -18,8 +18,8 @@ package fr.wseduc.webutils.logging.impl;
 
 
 import fr.wseduc.webutils.logging.Tracer;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class LogTracer implements Tracer {
 

@@ -18,23 +18,29 @@ package fr.wseduc.webutils.email;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.wseduc.webutils.DefaultAsyncResult;
 import fr.wseduc.webutils.eventbus.ResultMessage;
+import fr.wseduc.webutils.exception.AsyncResultException;
 import fr.wseduc.webutils.exception.InvalidConfigurationException;
 import fr.wseduc.webutils.Either;
+
+import static fr.wseduc.webutils.DefaultAsyncResult.handleAsyncError;
+import static fr.wseduc.webutils.DefaultAsyncResult.handleAsyncResult;
 import static fr.wseduc.webutils.Utils.isNotEmpty;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpClient;
-import org.vertx.java.core.http.HttpClientRequest;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.json.impl.Base64;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
-import org.vertx.java.platform.Container;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,6 +48,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -57,9 +64,9 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 	private final ObjectMapper mapper;
 	private static final String DATE_FORMAT = "yyyy-MM-dd";
 
-	public GoMailSender(Vertx vertx, Container container, JsonObject config)
+	public GoMailSender(Vertx vertx, JsonObject config)
 			throws InvalidConfigurationException, URISyntaxException {
-		super(vertx, container);
+		super(vertx, config);
 
 		if (config != null && isNotEmpty(config.getString("uri")) && isNotEmpty(config.getString("user"))
 				&& isNotEmpty(config.getString("password")) && isNotEmpty(config.getString("platform"))) {
@@ -71,10 +78,15 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 			} catch (IOException e) {
 				log.error(e);
 			}
-			basicAuthHeader = "Basic " + Base64.encodeBytes(userAndPassword.toByteArray());
-			URI uri = new URI(config.getString("uri"));
-			httpClient = vertx.createHttpClient().setHost(uri.getHost()).setPort(uri.getPort()).setMaxPoolSize(16)
-					.setSSL("https".equals(uri.getScheme())).setKeepAlive(false);
+			basicAuthHeader = "Basic " + Base64.getEncoder().encodeToString(userAndPassword.toByteArray());
+			final URI uri = new URI(config.getString("uri"));
+			final HttpClientOptions options = new HttpClientOptions()
+					.setDefaultHost(uri.getHost())
+					.setDefaultPort(uri.getPort())
+					.setSsl("https".equals(uri.getScheme()))
+					.setMaxPoolSize(16)
+					.setKeepAlive(false);
+			httpClient = vertx.createHttpClient(options);
 			platform = config.getString("platform");
 			mapper = new ObjectMapper();
 			mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX"));
@@ -86,49 +98,46 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 	}
 
 	@Override
-	protected void sendEmail(JsonObject json, final Handler<Message<JsonObject>> handler) {
-		if (json == null || json.getArray("to") == null || json.getString("from") == null
+	protected void sendEmail(JsonObject json, final Handler<AsyncResult<Message<JsonObject>>> handler) {
+		if (json == null || json.getJsonArray("to") == null || json.getString("from") == null
 				|| json.getString("subject") == null || json.getString("body") == null) {
 			log.error(json);
-			handler.handle(new ResultMessage().error("invalid.parameters"));
+			handler.handle(new DefaultAsyncResult<>(new AsyncResultException("invalid.parameters")));
 			return;
 		}
-		if (json.getArray("to").size() > 1) {
-			final AtomicInteger count = new AtomicInteger(json.getArray("to").size());
+		if (json.getJsonArray("to").size() > 1) {
+			final AtomicInteger count = new AtomicInteger(json.getJsonArray("to").size());
 			final AtomicBoolean success = new AtomicBoolean(true);
 			final JsonArray errors = new JsonArray();
-			final Handler<Message<JsonObject>> 	h = new Handler<Message<JsonObject>>() {
-				@Override
-				public void handle(Message<JsonObject> message) {
-					if (!"ok".equals(message.body().getString("status"))) {
-						success.set(false);
-						errors.addString(message.body().getString("message"));
-					}
-					if (count.decrementAndGet() == 0) {
-						if (success.get()) {
-							handler.handle(new ResultMessage());
-						} else {
-							handler.handle(new ResultMessage().error(errors.encode()));
-						}
+			final Handler<AsyncResult<Message<JsonObject>>>	h = ar -> {
+				if (ar.failed()) {
+					success.set(false);
+					errors.add(ar.cause().getMessage());
+				}
+				if (count.decrementAndGet() == 0) {
+					if (success.get()) {
+						handleAsyncResult(new ResultMessage(), handler);
+					} else {
+						handleAsyncError(errors.encode(), handler);
 					}
 				}
 			};
-			for (Object to : json.getArray("to")) {
-				send(json.copy().putArray("to", new JsonArray().addString(to.toString())), h);
+			for (Object to : json.getJsonArray("to")) {
+				send(json.copy().put("to", new JsonArray().add(to.toString())), h);
 			}
 		} else {
 			send(json, handler);
 		}
 	}
 
-	private void send(JsonObject json, final Handler<Message<JsonObject>> handler) {
+	private void send(JsonObject json, final Handler<AsyncResult<Message<JsonObject>>> handler) {
 		HttpClientRequest req = httpClient.post("/smtp/" + this.platform, new Handler<HttpClientResponse>() {
 			@Override
 			public void handle(HttpClientResponse resp) {
 				if (resp.statusCode() == 200) {
-					handler.handle(new ResultMessage());
+					handler.handle(new DefaultAsyncResult<>(new ResultMessage()));
 				} else {
-					handler.handle(new ResultMessage().error("GoMail HTTP status: " + resp.statusMessage()));					
+					handler.handle(new DefaultAsyncResult<>(new AsyncResultException("GoMail HTTP status: " + resp.statusMessage())));
 				}
 			}
 		});
@@ -138,47 +147,47 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 		JsonObject subject = new JsonObject();
 		JsonObject headers = new JsonObject();
 
-		to.putString("address", json.getArray("to").get(0).toString());
+		to.put("address", json.getJsonArray("to").getString(0));
 
-		from.putString("address", json.getString("from"));
-		subject.putString("Subject", json.getString("subject"));
+		from.put("address", json.getString("from"));
+		subject.put("Subject", json.getString("subject"));
 
-		JsonObject payload = new JsonObject().putObject("from", from)
-				.putObject("to", to)
-				.putString("subject", json.getString("subject"))
-				.putString("body", json.getString("body"));
+		JsonObject payload = new JsonObject().put("from", from)
+				.put("to", to)
+				.put("subject", json.getString("subject"))
+				.put("body", json.getString("body"));
 
 		/* TODO: Uncomment when GoMail supports multiple recipients
-		if (json.getArray("cc") != null && json.getArray("cc").size() > 0) {
+		if (json.getJsonArray("cc") != null && json.getJsonArray("cc").size() > 0) {
 			JsonArray cc = new JsonArray();
-			for (Object o : json.getArray("cc")) {
+			for (Object o : json.getJsonArray("cc")) {
 				JsonObject ccRecipient = new JsonObject();
-				ccRecipient.putString("address", o.toString());
+				ccRecipient.put("address", o.toString());
 				cc.add(ccRecipient);
 			}
-			payload.putArray("cc", cc);
+			payload.put("cc", cc);
 		}
-		if (json.getArray("bcc") != null && json.getArray("bcc").size() > 0) {
+		if (json.getJsonArray("bcc") != null && json.getJsonArray("bcc").size() > 0) {
 			JsonArray bcc = new JsonArray();
-			for (Object o : json.getArray("bcc")) {
+			for (Object o : json.getJsonArray("bcc")) {
 				JsonObject bccRecipient = new JsonObject();
-				bccRecipient.putString("address", o.toString());
+				bccRecipient.put("address", o.toString());
 				bcc.add(bccRecipient);
 			}
-			payload.putArray("bcc", bcc);
+			payload.put("bcc", bcc);
 		}
 		*/
 
-		if (json.getArray("headers") != null) {
-			for (Object o : json.getArray("headers")) {
+		if (json.getJsonArray("headers") != null) {
+			for (Object o : json.getJsonArray("headers")) {
 				if (!(o instanceof JsonObject))
 					continue;
 				JsonObject h = (JsonObject) o;
-				headers.putString(h.getString("name"), h.getString("value"));
+				headers.put(h.getString("name"), h.getString("value"));
 			}
 		}
 		if (headers.size() > 0) {
-			payload.putObject("headers", headers);
+			payload.put("headers", headers);
 		}
 		req.end(payload.encode());
 	}
@@ -206,7 +215,7 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 							try {
 								JsonObject res = new JsonObject(buffer.toString());
 
-								JsonArray l = res.getArray("hard_bounces");
+								JsonArray l = res.getJsonArray("hard_bounces");
 								if (l == null || l.size() == 0) {
 									handler.handle(
 											new Either.Right<String, List<Bounce>>(Collections.<Bounce>emptyList()));

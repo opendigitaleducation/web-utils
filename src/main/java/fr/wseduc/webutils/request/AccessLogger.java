@@ -17,15 +17,15 @@
 package fr.wseduc.webutils.request;
 
 import fr.wseduc.webutils.http.Renders;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.logging.LoggerFactory;
 
 public class AccessLogger {
 
-	protected static final org.vertx.java.core.logging.Logger log = LoggerFactory.getLogger(AccessLogger.class);
+	protected static final io.vertx.core.logging.Logger log = LoggerFactory.getLogger(AccessLogger.class);
 
-	public void log(HttpServerRequest request, VoidHandler handler) {
+	public void log(HttpServerRequest request, Handler<Void> handler) {
 		log.trace(formatLog(request));
 		handler.handle(null);
 	}

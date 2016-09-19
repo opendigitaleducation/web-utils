@@ -16,19 +16,20 @@
 
 package fr.wseduc.webutils.validation;
 
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.AsyncResultHandler;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.file.FileSystem;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import java.io.File;
+import java.util.List;
 
 
 public class JsonSchemaValidator {
@@ -65,9 +66,9 @@ public class JsonSchemaValidator {
 					log.debug("Json schema directory not found.");
 					return;
 				}
-				fs.readDir(JSONSCHEMA_PATH, new Handler<AsyncResult<String[]>>() {
+				fs.readDir(JSONSCHEMA_PATH, new Handler<AsyncResult<List<String>>>() {
 					@Override
-					public void handle(AsyncResult<String[]> event) {
+					public void handle(AsyncResult<List<String>> event) {
 						if (event.succeeded()) {
 							for (final String path : event.result()) {
 								final String key = keyPrefix + path.substring(
@@ -77,9 +78,9 @@ public class JsonSchemaValidator {
 									public void handle(AsyncResult<Buffer> event) {
 										if (event.succeeded()) {
 											JsonObject j = new JsonObject()
-													.putString("action","addSchema")
-													.putString("key", key)
-													.putObject("jsonSchema",
+													.put("action","addSchema")
+													.put("key", key)
+													.put("jsonSchema",
 															new JsonObject(event.result().toString()));
 											eb.publish(address, j);
 										} else {
@@ -97,12 +98,13 @@ public class JsonSchemaValidator {
 		});
 	}
 
-	public void validate(String schema, JsonObject json, AsyncResultHandler<Message<JsonObject>> handler) {
+	public void validate(String schema, JsonObject json, Handler<AsyncResult<Message<JsonObject>>> handler) {
 		JsonObject j = new JsonObject()
-				.putString("action", "validate")
-				.putString("key", schema)
-				.putObject("json", json);
-		eb.sendWithTimeout(address, j, 10000, handler);
+				.put("action", "validate")
+				.put("key", schema)
+				.put("json", json);
+
+		eb.send(address, j, new DeliveryOptions().setSendTimeout(10000), handler);
 	}
 
 }

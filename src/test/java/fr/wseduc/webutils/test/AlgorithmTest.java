@@ -22,7 +22,7 @@ import fr.wseduc.webutils.security.JWT;
 import fr.wseduc.webutils.security.Md5;
 import fr.wseduc.webutils.security.Sha256;
 import org.junit.Test;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.json.JsonObject;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

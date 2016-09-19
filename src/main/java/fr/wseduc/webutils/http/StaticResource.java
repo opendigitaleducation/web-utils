@@ -22,8 +22,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.HttpServerResponse;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 
 public class StaticResource {
 
@@ -72,6 +72,10 @@ public class StaticResource {
 		} else {
 			request.response().sendFile(ressourcePath);
 		}
+	}
+
+	public static String formatDate(long lastModified) {
+		return formatDate(new Date(lastModified));
 	}
 
 	public static String formatDate(Date lastModified) {

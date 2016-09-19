@@ -18,7 +18,6 @@ package fr.wseduc.webutils;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 
 import fr.wseduc.vertx.eventbus.EventBusWrapperFactory;
 import fr.wseduc.webutils.http.BaseController;
@@ -28,52 +27,44 @@ import fr.wseduc.webutils.logging.Tracer;
 import fr.wseduc.webutils.logging.TracerFactory;
 import fr.wseduc.webutils.request.filter.Filter;
 import fr.wseduc.webutils.request.filter.SecurityHandler;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.MultiMap;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.file.FileProps;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.RouteMatcher;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.platform.Verticle;
+import io.vertx.core.*;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.file.FileProps;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
 
 import fr.wseduc.webutils.http.StaticResource;
 import fr.wseduc.webutils.request.CookieHelper;
 import fr.wseduc.webutils.security.SecuredAction;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.shareddata.LocalMap;
+import org.vertx.java.core.http.RouteMatcher;
 
-public abstract class Server extends Verticle {
+public abstract class Server extends AbstractVerticle {
 
-	public Logger log;
+	protected static final Logger log = LoggerFactory.getLogger(Server.class);
 	public JsonObject config;
 	public RouteMatcher rm;
 	public Tracer trace;
 	private I18n i18n;
 	protected Map<String, SecuredAction> securedActions;
 	protected Set<Binding> securedUriBinding = new HashSet<>();
-	private ConcurrentMap<String, String> staticRessources;
+	private LocalMap<String, String> staticRessources;
 	private boolean dev;
 
 	@Override
-	public void start() {
+	public void start() throws Exception {
 		super.start();
-		log = container.logger();
-		if (config == null) {
-			config = container.config();
-		} else if (container.config().size() == 0) {
-			container.config().mergeIn(config);
-		}
+		config = config();
 		rm = new RouteMatcher();
 		trace = TracerFactory.getTracer(this.getClass().getSimpleName());
 		i18n = I18n.getInstance();
-		i18n.init(container, vertx);
+		i18n.init(vertx);
 		CookieHelper.getInstance().init((String) vertx
-				.sharedData().getMap("server").get("signKey"), log);
-		staticRessources = vertx.sharedData().getMap("staticRessources");
+				.sharedData().getLocalMap("server").get("signKey"), log);
+		staticRessources = vertx.sharedData().getLocalMap("staticRessources");
 		dev = "dev".equals(config.getString("mode"));
 
 		log.info("Verticle: " + this.getClass().getSimpleName() + " starts on port: " + config.getInteger("port"));
@@ -87,7 +78,7 @@ public abstract class Server extends Verticle {
 				if (dev) {
 					request.response().sendFile("." + request.path().substring(prefix.length()));
 				} else {
-					if (staticRessources.containsKey(request.uri())) {
+					if (staticRessources.get(request.uri()) != null) {
 						StaticResource.serveRessource(request,
 								"." + request.path().substring(prefix.length()),
 								staticRessources.get(request.uri()), dev);
@@ -129,19 +120,19 @@ public abstract class Server extends Verticle {
 		rm.get(prefix + "/monitoring", new Handler<HttpServerRequest>() {
 			@Override
 			public void handle(HttpServerRequest event) {
-				Controller.renderJson(event, new JsonObject().putString("test", "ok"));
+				Controller.renderJson(event, new JsonObject().put("test", "ok"));
 			}
 		});
 
 		try {
 			final String appName = config.getString("app-name", this.getClass().getSimpleName());
 			JsonObject application = new JsonObject()
-			.putString("name", appName)
-			.putString("displayName", config.getString("app-displayName", appName.toLowerCase()))
-			.putString("icon", config.getString("app-icon", ""))
-			.putString("address", config.getString("app-address", ""))
-			.putBoolean("display", config.getBoolean("display", true))
-			.putString("prefix", getPathPrefix(config));
+			.put("name", appName)
+			.put("displayName", config.getString("app-displayName", appName.toLowerCase()))
+			.put("icon", config.getString("app-icon", ""))
+			.put("address", config.getString("app-address", ""))
+			.put("display", config.getBoolean("display", true))
+			.put("prefix", getPathPrefix(config));
 			JsonArray actions = StartupUtils.loadSecuredActions(vertx);
 			securedActions = StartupUtils.securedActionsToMap(actions);
 			if (config.getString("integration-mode","BUS").equals("HTTP")) {
@@ -169,10 +160,10 @@ public abstract class Server extends Verticle {
 	 * @param handler receive attributes
 	 */
 	public void bodyToParams(final HttpServerRequest request, final Handler<MultiMap> handler) {
-		request.expectMultiPart(true);
-		request.endHandler(new VoidHandler() {
+		request.setExpectMultipart(true);
+		request.endHandler(new Handler<Void>() {
 			@Override
-			protected void handle() {
+			public void handle(Void v) {
 				handler.handle(request.formAttributes());
 			}
 		});
@@ -193,16 +184,16 @@ public abstract class Server extends Verticle {
 	}
 
 	public static EventBus getEventBus(Vertx vertx) {
-		ServiceLoader<EventBusWrapperFactory> factory = ServiceLoader
-				.load(EventBusWrapperFactory.class);
-		if (factory.iterator().hasNext()) {
-			return factory.iterator().next().getEventBus(vertx);
-		}
+//		ServiceLoader<EventBusWrapperFactory> factory = ServiceLoader
+//				.load(EventBusWrapperFactory.class);
+//		if (factory.iterator().hasNext()) {
+//			return factory.iterator().next().getEventBus(vertx);
+//		}
 		return vertx.eventBus();
 	}
 
 	protected Server addController(BaseController controller) {
-		controller.init(vertx, container, rm, securedActions);
+		controller.init(vertx, config, rm, securedActions);
 		securedUriBinding.addAll(controller.securedUriBinding());
 		return this;
 	}

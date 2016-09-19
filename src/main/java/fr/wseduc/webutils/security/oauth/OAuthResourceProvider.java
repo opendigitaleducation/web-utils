@@ -16,10 +16,10 @@
 
 package fr.wseduc.webutils.security.oauth;
 
-import org.vertx.java.core.Handler;
+import io.vertx.core.Handler;
 
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
-import org.vertx.java.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerRequest;
 
 public interface OAuthResourceProvider {
 

@@ -16,8 +16,8 @@
 
 package fr.wseduc.webutils.security;
 
-import org.vertx.java.core.MultiMap;
-import org.vertx.java.core.http.HttpServerRequest;
+import io.vertx.core.MultiMap;
+import io.vertx.core.http.HttpServerRequest;
 
 import static fr.wseduc.webutils.security.XSSUtils.safeMultiMap;
 

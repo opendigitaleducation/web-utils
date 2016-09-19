@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-package fr.wseduc.webutils.eventbus;
+package fr.wseduc.webutils.exception;
 
-import fr.wseduc.vertx.eventbus.EventBusWrapperFactory;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.eventbus.EventBus;
+public class AsyncResultException extends Exception {
 
-public class DefaultEventBusFactory implements EventBusWrapperFactory{
 
-	@Override
-	public EventBus getEventBus(Vertx vertx) {
-		return vertx.eventBus();
+	public AsyncResultException(String message) {
+		super(message);
 	}
 
 }

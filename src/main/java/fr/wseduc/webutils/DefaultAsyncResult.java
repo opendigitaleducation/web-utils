@@ -16,7 +16,9 @@
 
 package fr.wseduc.webutils;
 
-import org.vertx.java.core.AsyncResult;
+import fr.wseduc.webutils.exception.AsyncResultException;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 
 public class DefaultAsyncResult<T> implements AsyncResult<T> {
 
@@ -51,6 +53,14 @@ public class DefaultAsyncResult<T> implements AsyncResult<T> {
 	@Override
 	public boolean failed() {
 		return exception != null;
+	}
+
+	public static <T> void handleAsyncResult(T result, Handler<AsyncResult<T>> handler) {
+		handler.handle(new DefaultAsyncResult<>(result));
+	}
+
+	public static <T> void handleAsyncError(String error, Handler<AsyncResult<T>> handler) {
+		handler.handle(new DefaultAsyncResult<>(new AsyncResultException(error)));
 	}
 
 }

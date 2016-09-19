@@ -17,17 +17,16 @@
 package fr.wseduc.webutils.security;
 
 
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpClient;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.json.impl.Base64;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -44,6 +43,7 @@ import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -92,12 +92,13 @@ public final class JWT {
 
 	public JWT(Vertx vertx, String secret, URI certsUri) {
 		if (certsUri != null) {
-			this.httpClient = vertx.createHttpClient()
-					.setHost(certsUri.getHost())
-					.setPort(certsUri.getPort())
-					.setSSL("https".equals(certsUri.getScheme()))
+			HttpClientOptions options = new HttpClientOptions()
+					.setDefaultHost(certsUri.getHost())
+					.setDefaultPort(certsUri.getPort())
+					.setSsl("https".equals(certsUri.getScheme()))
 					.setMaxPoolSize(4)
 					.setKeepAlive(false);
+			this.httpClient = vertx.createHttpClient(options);
 			this.certsPath = certsUri.getPath();
 			findCertificates(null);
 		}
@@ -112,11 +113,11 @@ public final class JWT {
 
 	public static void listCertificates(final Vertx vertx, String certsPath, final Handler<JsonObject> handler) {
 		final JsonObject certs = new JsonObject();
-		vertx.fileSystem().readDir(certsPath, ".*.crt", new Handler<AsyncResult<String[]>>() {
+		vertx.fileSystem().readDir(certsPath, ".*.crt", new Handler<AsyncResult<List<String>>>() {
 			@Override
-			public void handle(AsyncResult<String[]> ar) {
+			public void handle(AsyncResult<List<String>> ar) {
 				if (ar.succeeded()) {
-					final AtomicInteger count = new AtomicInteger(ar.result().length);
+					final AtomicInteger count = new AtomicInteger(ar.result().size());
 					for (final String certificate: ar.result()) {
 						vertx.fileSystem().readFile(certificate, new Handler<AsyncResult<Buffer>>() {
 							@Override
@@ -125,7 +126,7 @@ public final class JWT {
 									int idx = certificate.lastIndexOf(File.separator);
 									String crtName = (idx > -1) ? certificate.substring(idx + 1) : certificate;
 									crtName = crtName.substring(0, crtName.lastIndexOf("."));
-									certs.putString(crtName, asyncResult.result().toString());
+									certs.put(crtName, asyncResult.result().toString());
 								} else {
 									log.error("Error reading certificate : " + certificate, asyncResult.cause());
 								}
@@ -144,9 +145,9 @@ public final class JWT {
 	}
 
 	private void loadPrivateKeys(final Vertx vertx, String keysPath) {
-		vertx.fileSystem().readDir(keysPath, ".*.pk8", new Handler<AsyncResult<String[]>>() {
+		vertx.fileSystem().readDir(keysPath, ".*.pk8", new Handler<AsyncResult<List<String>>>() {
 			@Override
-			public void handle(AsyncResult<String[]> ar) {
+			public void handle(AsyncResult<List<String>> ar) {
 				if (ar.succeeded()) {
 					for (final String privateKey: ar.result()) {
 						vertx.fileSystem().readFile(privateKey, new Handler<AsyncResult<Buffer>>() {
@@ -176,7 +177,7 @@ public final class JWT {
 		});
 	}
 
-	private void findCertificates(final VoidHandler handler) {
+	private void findCertificates(final Handler<Void> handler) {
 		httpClient.getNow(certsPath, new Handler<HttpClientResponse>() {
 			@Override
 			public void handle(HttpClientResponse response) {
@@ -187,7 +188,7 @@ public final class JWT {
 							JsonObject c =  new JsonObject(buffer.toString("UTF-8"));
 							try {
 								CertificateFactory f = CertificateFactory.getInstance("X.509");
-								for (String a : c.getFieldNames()) {
+								for (String a : c.fieldNames()) {
 									String cert = c.getString(a);
 									if (cert != null) {
 										try {
@@ -226,7 +227,7 @@ public final class JWT {
 		for (int i = 0; i < repeat; i++) {
 			b.append("=");
 		}
-		return Base64.decode(s + b.toString(), Base64.URL_SAFE);
+		return Base64.getUrlDecoder().decode(s + b.toString());
 	}
 
 	public static String base64Encode(String s) throws UnsupportedEncodingException {
@@ -234,7 +235,7 @@ public final class JWT {
 	}
 
 	public static String base64Encode(byte[] bytes) throws UnsupportedEncodingException {
-		return Base64.encodeBytes(bytes, Base64.URL_SAFE);
+		return Base64.getUrlEncoder().encodeToString(bytes);
 	}
 
 	public void verifyAndGet(final String token, final Handler<JsonObject> handler) {
@@ -259,9 +260,9 @@ public final class JWT {
 				if (kid != null) {
 					PublicKey publicKey = certificates.get(kid);
 					if (publicKey == null) {
-						findCertificates(new VoidHandler() {
+						findCertificates(new Handler<Void>() {
 							@Override
-							protected void handle() {
+							public void handle(Void v) {
 								handler.handle(verifyAndGet(token, certificates.get(kid)));
 							}
 						});
@@ -334,9 +335,9 @@ public final class JWT {
 	}
 
 	public static String encodeAndSign(JsonObject payload, String kid, PrivateKey privateKey) throws Exception {
-		final JsonObject header = new JsonObject().putString("typ", "JWT").putString("alg", "RS256");
+		final JsonObject header = new JsonObject().put("typ", "JWT").put("alg", "RS256");
 		if (isNotEmpty(kid)) {
-			header.putString("kid", kid);
+			header.put("kid", kid);
 		}
 		final StringBuilder sb = new StringBuilder();
 		sb.append(base64Encode(header.encode())).append(".").append(base64Encode(payload.encode()));

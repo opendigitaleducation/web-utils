@@ -18,6 +18,7 @@ package fr.wseduc.webutils.http;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,17 +27,15 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
-import org.vertx.java.platform.Container;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import fr.wseduc.webutils.I18n;
 import fr.wseduc.webutils.Server;
@@ -47,16 +46,16 @@ public class Renders {
 
 	protected static final Logger log = LoggerFactory.getLogger(Renders.class);
 	protected String pathPrefix;
-	protected Container container;
 	private final I18n i18n;
 	protected Vertx vertx;
 	private static final ConcurrentMap<String, Template> templates = new ConcurrentHashMap<>();
 	private List<HookProcess> hookRenderProcess;
+	protected JsonObject config;
 
-	public Renders(Vertx vertx, Container container) {
-		this.container = container;
-		if (container != null) {
-			this.pathPrefix = Server.getPathPrefix(container.config());
+	public Renders(Vertx vertx, JsonObject config) {
+		this.config = config;
+		if (config != null) {
+			this.pathPrefix = Server.getPathPrefix(config);
 		}
 		this.i18n = I18n.getInstance();
 		this.vertx = vertx;
@@ -79,7 +78,7 @@ public class Renders {
 			@Override
 			public void execute(Template.Fragment frag, Writer out) throws IOException {
 				String path = frag.execute();
-				out.write(staticResource(request, container.config().getBoolean("ssl", false),
+				out.write(staticResource(request, config.getBoolean("ssl", false),
 						null, pathPrefix + "/public", path));
 			}
 		});
@@ -89,7 +88,7 @@ public class Renders {
 			@Override
 			public void execute(Template.Fragment frag, Writer out) throws IOException {
 				String path = frag.execute();
-				out.write(staticResource(request, container.config().getBoolean("ssl", false),
+				out.write(staticResource(request, config.getBoolean("ssl", false),
 						"8001", "/infra/public", path));
 			}
 		});
@@ -149,9 +148,9 @@ public class Renders {
 					request.response().putHeader("content-type", "text/html; charset=utf-8");
 					request.response().setStatusCode(status);
 					if (hookRenderProcess != null) {
-						executeHandlersHookRender(request, new VoidHandler() {
+						executeHandlersHookRender(request, new Handler<Void>() {
 							@Override
-							protected void handle() {
+							public void handle(Void v) {
 								request.response().end(writer.toString());
 							}
 						});
@@ -165,14 +164,15 @@ public class Renders {
 		});
 	}
 
-	private void executeHandlersHookRender(final HttpServerRequest request, VoidHandler endHandler) {
-		final VoidHandler[] handlers = new VoidHandler[hookRenderProcess.size() + 1];
+	@SuppressWarnings("unchecked")
+	private void executeHandlersHookRender(final HttpServerRequest request, Handler<Void> endHandler) {
+		final Handler[] handlers = new Handler[hookRenderProcess.size() + 1];
 		handlers[handlers.length - 1] = endHandler;
 		for (int i = hookRenderProcess.size() - 1; i >= 0; i--) {
 			final int j = i;
-			handlers[i] = new VoidHandler() {
+			handlers[i] = new Handler<Void>() {
 				@Override
-				protected void handle() {
+				public void handle(Void v) {
 					hookRenderProcess.get(j).execute(request, handlers[j + 1]);
 				}
 			};
@@ -204,7 +204,7 @@ public class Renders {
 				if (t != null) {
 					try {
 						Writer writer = new StringWriter();
-						Map<String, Object> ctx = params.toMap();
+						Map<String, Object> ctx = params.getMap();
 						setLambdaTemplateRequest(request, ctx);
 						t.execute(ctx, writer);
 						handler.handle(writer);
@@ -235,7 +235,7 @@ public class Renders {
 			}
 			path = "view/" + template + ".html";
 		}
-		if (!"dev".equals(container.config().getString("mode")) && templates.containsKey(path)) {
+		if (!"dev".equals(config.getString("mode")) && templates.containsKey(path)) {
 			handler.handle(templates.get(path));
 		} else {
 			final String p = path;
@@ -245,7 +245,7 @@ public class Renders {
 					if (ar.succeeded()) {
 						Mustache.Compiler compiler = Mustache.compiler().defaultValue("");
 						Template template = compiler.compile(ar.result().toString("UTF-8"));
-						if("dev".equals(container.config().getString("mode"))) {
+						if("dev".equals(config.getString("mode"))) {
 							templates.put(p, template);
 						} else {
 							templates.putIfAbsent(p, template);
@@ -280,7 +280,7 @@ public class Renders {
 		request.response().putHeader("Cache-Control", "no-cache, must-revalidate");
 		request.response().putHeader("Expires", "-1");
 		request.response().setStatusCode(400).setStatusMessage("Bad Request").end(
-				new JsonObject().putString("error", message).encode());
+				new JsonObject().put("error", message).encode());
 	}
 
 	public static void unauthorized(HttpServerRequest request) {
@@ -292,7 +292,7 @@ public class Renders {
 		request.response().putHeader("Cache-Control", "no-cache, must-revalidate");
 		request.response().putHeader("Expires", "-1");
 		request.response().setStatusCode(401).setStatusMessage("Unauthorized").end(
-				new JsonObject().putString("error", message).encode());
+				new JsonObject().put("error", message).encode());
 	}
 
 	public static void forbidden(HttpServerRequest request) {
@@ -304,7 +304,7 @@ public class Renders {
 		request.response().putHeader("Cache-Control", "no-cache, must-revalidate");
 		request.response().putHeader("Expires", "-1");
 		request.response().setStatusCode(403).setStatusMessage("Forbidden").end(
-				new JsonObject().putString("error", message).encode());
+				new JsonObject().put("error", message).encode());
 	}
 
 	public static void notFound(HttpServerRequest request) {
@@ -316,7 +316,7 @@ public class Renders {
 		request.response().putHeader("Cache-Control", "no-cache, must-revalidate");
 		request.response().putHeader("Expires", "-1");
 		request.response().setStatusCode(404).setStatusMessage("Not Found").end(
-				new JsonObject().putString("error", message).encode());
+				new JsonObject().put("error", message).encode());
 	}
 
 	public static void conflict(HttpServerRequest request) {
@@ -328,7 +328,7 @@ public class Renders {
 		request.response().putHeader("Cache-Control", "no-cache, must-revalidate");
 		request.response().putHeader("Expires", "-1");
 		request.response().setStatusCode(409).setStatusMessage("Conflict").end(
-				new JsonObject().putString("error", message).encode());
+				new JsonObject().put("error", message).encode());
 	}
 
 	public static void notModified(HttpServerRequest request) {
@@ -406,10 +406,11 @@ public class Renders {
 		if (proto != null && !proto.trim().isEmpty()) {
 			return proto;
 		}
-		final URI uri = request.absoluteURI();
 		String scheme = null;
-		if (uri != null) {
-			scheme = uri.getScheme();
+		try {
+			scheme = new URI(request.absoluteURI()).getScheme();
+		} catch (URISyntaxException e) {
+			log.error("Invalid uri", e);
 		}
 		if (scheme == null) {
 			scheme = "http";
@@ -430,7 +431,7 @@ public class Renders {
 		if (isNotEmpty(ip)) {
 			return ip;
 		}
-		return request.remoteAddress().getHostString();
+		return request.remoteAddress().host();
 	}
 
 	public void addHookRenderProcess(HookProcess hookRenderProcess) {

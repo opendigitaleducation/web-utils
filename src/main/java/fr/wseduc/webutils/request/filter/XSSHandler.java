@@ -17,8 +17,8 @@
 package fr.wseduc.webutils.request.filter;
 
 import fr.wseduc.webutils.security.XssHttpServerRequest;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.http.HttpServerRequest;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
 
 public abstract class XSSHandler implements Handler<HttpServerRequest> {
 

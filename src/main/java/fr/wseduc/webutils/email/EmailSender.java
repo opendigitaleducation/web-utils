@@ -17,7 +17,7 @@
 package fr.wseduc.webutils.email;
 
 import fr.wseduc.webutils.Either;
-import org.vertx.java.core.Handler;
+import io.vertx.core.Handler;
 
 import java.util.Date;
 import java.util.List;

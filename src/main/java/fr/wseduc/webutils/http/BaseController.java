@@ -19,32 +19,32 @@ package fr.wseduc.webutils.http;
 import fr.wseduc.webutils.Controller;
 import fr.wseduc.webutils.Server;
 import fr.wseduc.webutils.security.SecuredAction;
-import org.vertx.java.core.Vertx;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import org.vertx.java.core.http.RouteMatcher;
-import org.vertx.java.platform.Container;
 
 import java.util.Map;
 
 public class BaseController extends Controller {
 
-	private BaseController(Vertx vertx, Container container, RouteMatcher rm,
+	private BaseController(Vertx vertx, JsonObject config, RouteMatcher rm,
 						   Map<String, SecuredAction> securedActions) {
-		super(vertx, container, rm, securedActions);
+		super(vertx, config, rm, securedActions);
 	}
 
 	public BaseController() {
 		this(null, null, null, null);
 	}
 
-	public void init(Vertx vertx, Container container, RouteMatcher rm,
+	public void init(Vertx vertx, JsonObject config, RouteMatcher rm,
 					 Map<String, SecuredAction> securedActions) {
 		super.vertx = vertx;
-		super.container = container;
+		super.config = config;
 		super.rm = rm;
 		super.securedActions = securedActions;
 		super.eb = Server.getEventBus(vertx);
 		if (pathPrefix == null) {
-			super.pathPrefix = Server.getPathPrefix(container.config());
+			super.pathPrefix = Server.getPathPrefix(config);
 		}
 		if (rm != null) {
 			loadRoutes();

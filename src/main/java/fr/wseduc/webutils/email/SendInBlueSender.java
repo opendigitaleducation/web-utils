@@ -18,23 +18,29 @@ package fr.wseduc.webutils.email;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.wseduc.webutils.DefaultAsyncResult;
 import fr.wseduc.webutils.eventbus.ResultMessage;
+import fr.wseduc.webutils.exception.AsyncResultException;
 import fr.wseduc.webutils.exception.InvalidConfigurationException;
 import fr.wseduc.webutils.Either;
+
+import static fr.wseduc.webutils.DefaultAsyncResult.handleAsyncError;
+import static fr.wseduc.webutils.DefaultAsyncResult.handleAsyncResult;
 import static fr.wseduc.webutils.Utils.isNotEmpty;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpClient;
-import org.vertx.java.core.http.HttpClientRequest;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.json.DecodeException;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
-import org.vertx.java.platform.Container;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -57,17 +63,22 @@ public class SendInBlueSender extends NotificationHelper implements EmailSender 
 	private final ObjectMapper mapper;
 	private static final String DATE_FORMAT = "yyyy-MM-dd";
 
-	public SendInBlueSender(Vertx vertx, Container container, JsonObject config)
+	public SendInBlueSender(Vertx vertx, JsonObject config)
 			throws InvalidConfigurationException, URISyntaxException {
-		super(vertx, container);
+		super(vertx, config);
 		if (config != null && isNotEmpty(config.getString("uri")) && isNotEmpty(config.getString("api-key"))) {
 			URI uri = new URI(config.getString("uri"));
-			httpClient = vertx.createHttpClient()
-					.setHost(uri.getHost())
-					.setPort(uri.getPort())
+			HttpClientOptions options = new HttpClientOptions()
+					.setDefaultHost(uri.getHost())
+					.setDefaultPort(uri.getPort())
+					.setSsl("https".equals(uri.getScheme()))
 					.setMaxPoolSize(16)
-					.setSSL("https".equals(uri.getScheme()))
 					.setKeepAlive(false);
+			httpClient = vertx.createHttpClient(options);
+//					.setPort()
+//					.setMaxPoolSize(16)
+//					.setSSL("https".equals(uri.getScheme()))
+//					.setKeepAlive(false);
 			apiKey = config.getString("api-key");
 			dedicatedIp = config.getString("ip");
 			splitRecipients = config.getBoolean("split-recipients", false);
@@ -86,43 +97,40 @@ public class SendInBlueSender extends NotificationHelper implements EmailSender 
 	@Override
 	public void hardBounces(Date startDate, Date endDate, final Handler<Either<String, List<Bounce>>> handler) {
 		if (startDate == null) {
-			handler.handle(new Either.Left<String, List<Bounce>>("invalid.date"));
+			handler.handle(new Either.Left<>("invalid.date"));
 			return;
 		}
 		final DateFormat df = new SimpleDateFormat(DATE_FORMAT);
-		final JsonObject payload = new JsonObject().putString("event", "hard_bounce");
+		final JsonObject payload = new JsonObject().put("event", "hard_bounce");
 		final String start = df.format(startDate);
 		if (endDate != null) {
-			payload.putString("start_date", start).putString("end_date", df.format(endDate));
+			payload.put("start_date", start).put("end_date", df.format(endDate));
 		} else {
-			payload.putString("date", start);
+			payload.put("date", start);
 		}
 		HttpClientRequest req = httpClient.post("/v2.0/report", new Handler<HttpClientResponse>() {
 			@Override
 			public void handle(final HttpClientResponse resp) {
-				resp.bodyHandler(new Handler<Buffer>() {
-					@Override
-					public void handle(Buffer buffer) {
-						try {
-							JsonObject res = new JsonObject(buffer.toString());
-							if ("success".equals(res.getString("code"))) {
-								JsonArray l = res.getArray("data");
-								if (l == null || l.size() == 0) {
-									handler.handle(new Either.Right<String, List<Bounce>>(
-											Collections.<Bounce>emptyList()));
-									return;
-								}
-								List<Bounce> bounces = mapper.readValue(l.encode(),
-										new TypeReference<List<Bounce>>(){});
-								handler.handle(new Either.Right<String, List<Bounce>>(bounces));
-							} else {
-								handler.handle(new Either.Left<String, List<Bounce>>(
-										res.getValue("message").toString()));
+				resp.bodyHandler(buffer -> {
+					try {
+						JsonObject res = new JsonObject(buffer.toString());
+						if ("success".equals(res.getString("code"))) {
+							JsonArray l = res.getJsonArray("data");
+							if (l == null || l.size() == 0) {
+								handler.handle(new Either.Right<>(
+										Collections.<Bounce>emptyList()));
+								return;
 							}
-						} catch (RuntimeException | IOException e) {
-							handler.handle(new Either.Left<String, List<Bounce>>(e.getMessage()));
-							log.error(e.getMessage(), e);
+							List<Bounce> bounces = mapper.readValue(l.encode(),
+									new TypeReference<List<Bounce>>(){});
+							handler.handle(new Either.Right<>(bounces));
+						} else {
+							handler.handle(new Either.Left<>(
+									res.getValue("message").toString()));
 						}
+					} catch (RuntimeException | IOException e) {
+						handler.handle(new Either.Left<>(e.getMessage()));
+						log.error(e.getMessage(), e);
 					}
 				});
 			}
@@ -132,98 +140,89 @@ public class SendInBlueSender extends NotificationHelper implements EmailSender 
 	}
 
 	@Override
-	protected void sendEmail(JsonObject json, final Handler<Message<JsonObject>> handler) {
-		if (json == null || json.getArray("to") == null || json.getString("from") == null ||
+	protected void sendEmail(JsonObject json, final Handler<AsyncResult<Message<JsonObject>>> handler) {
+		if (json == null || json.getJsonArray("to") == null || json.getString("from") == null ||
 				json.getString("subject") == null || json.getString("body") == null) {
-			handler.handle(new ResultMessage().error("invalid.parameters"));
+			handler.handle(new DefaultAsyncResult<>(new AsyncResultException("invalid.parameters")));
 			return;
 		}
-		if (splitRecipients && json.getArray("to").size() > 1) {
-			final AtomicInteger count = new AtomicInteger(json.getArray("to").size());
+		if (splitRecipients && json.getJsonArray("to").size() > 1) {
+			final AtomicInteger count = new AtomicInteger(json.getJsonArray("to").size());
 			final AtomicBoolean success = new AtomicBoolean(true);
 			final JsonArray errors = new JsonArray();
-			final Handler<Message<JsonObject>> h = new Handler<Message<JsonObject>>() {
-				@Override
-				public void handle(Message<JsonObject> message) {
-					if (!"ok".equals(message.body().getString("status"))) {
-						success.set(false);
-						errors.addString(message.body().getString("message"));
-					}
-					if (count.decrementAndGet() == 0) {
-						if (success.get()) {
-							handler.handle(new ResultMessage());
-						} else {
-							handler.handle(new ResultMessage().error(errors.encode()));
-						}
+			final Handler<AsyncResult<Message<JsonObject>>> h = ar -> {
+				if (ar.failed()) {
+					success.set(false);
+					errors.add(ar.cause().getMessage());
+				}
+				if (count.decrementAndGet() == 0) {
+					if (success.get()) {
+						handleAsyncResult(new ResultMessage(), handler);
+					} else {
+						handleAsyncError(errors.encode(), handler);
 					}
 				}
 			};
-			for (Object to: json.getArray("to")) {
-				send(json.copy().putArray("to", new JsonArray().addString(to.toString())), h);
+			for (Object to: json.getJsonArray("to")) {
+				send(json.copy().put("to", new JsonArray().add(to.toString())), h);
 			}
 		} else {
 			send(json, handler);
 		}
 	}
 
-	private void send(JsonObject json, final Handler<Message<JsonObject>> handler) {
-		HttpClientRequest req = httpClient.post("/v2.0/email", new Handler<HttpClientResponse>() {
-			@Override
-			public void handle(HttpClientResponse resp) {
-				if (resp.statusCode() == 200) {
-					handler.handle(new ResultMessage());
-				} else {
-					resp.bodyHandler(new Handler<Buffer>() {
-						@Override
-						public void handle(Buffer buffer) {
-							try {
-								JsonObject err = new JsonObject(buffer.toString());
-								handler.handle(new ResultMessage().error(err.getString("message")));
-							} catch (DecodeException e) {
-								handler.handle(new ResultMessage().error(buffer.toString()));
-							}
-						}
-					});
-				}
+	private void send(JsonObject json, final Handler<AsyncResult<Message<JsonObject>>> handler) {
+		HttpClientRequest req = httpClient.post("/v2.0/email", resp -> {
+			if (resp.statusCode() == 200) {
+				handleAsyncResult(new ResultMessage(), handler);
+			} else {
+				resp.bodyHandler(buffer -> {
+					try {
+						JsonObject err = new JsonObject(buffer.toString());
+						handleAsyncError(err.getString("message"), handler);
+					} catch (DecodeException e) {
+						handleAsyncError(buffer.toString(), handler);
+					}
+				});
 			}
 		});
 		req.putHeader("api-key", apiKey);
 		JsonObject to = new JsonObject();
-		for (Object o: json.getArray("to")) {
-			to.putString(o.toString(), "");
+		for (Object o: json.getJsonArray("to")) {
+			to.put(o.toString(), "");
 		}
 		JsonObject payload = new JsonObject()
-				.putObject("to", to)
-				.putArray("from", new JsonArray().add(json.getString("from")))
-				.putString("subject", json.getString("subject"))
-				.putString("html", json.getString("body"));
+				.put("to", to)
+				.put("from", new JsonArray().add(json.getString("from")))
+				.put("subject", json.getString("subject"))
+				.put("html", json.getString("body"));
 		JsonObject headers = new JsonObject();
 		if (isNotEmpty(dedicatedIp)) {
-			headers.putString("X-Mailin-IP", dedicatedIp);
+			headers.put("X-Mailin-IP", dedicatedIp);
 		}
-		if (json.getArray("headers") != null) {
-			for (Object o: json.getArray("headers")) {
+		if (json.getJsonArray("headers") != null) {
+			for (Object o: json.getJsonArray("headers")) {
 				if (!(o instanceof JsonObject)) continue;
 				JsonObject h = (JsonObject) o;
-				headers.putString(h.getString("name"), h.getString("value"));
+				headers.put(h.getString("name"), h.getString("value"));
 			}
 		}
 		if (headers.size() > 0) {
-			payload.putObject("headers", headers);
+			payload.put("headers", headers);
 		}
-		if (json.getArray("cc") != null && json.getArray("cc").size() > 0) {
+		if (json.getJsonArray("cc") != null && json.getJsonArray("cc").size() > 0) {
 			JsonObject cc = new JsonObject();
-			for (Object o: json.getArray("cc")) {
-				cc.putString(o.toString(), "");
+			for (Object o: json.getJsonArray("cc")) {
+				cc.put(o.toString(), "");
 			}
-			payload.putObject("cc", cc);
+			payload.put("cc", cc);
 		}
-		if (json.getArray("bcc") != null && json.getArray("bcc").size() > 0) {
+		if (json.getJsonArray("bcc") != null && json.getJsonArray("bcc").size() > 0) {
 			JsonObject bcc = new JsonObject();
-			for (Object o: json.getArray("bcc")) {
-				bcc.putString(o.toString(), "");
+			for (Object o: json.getJsonArray("bcc")) {
+				bcc.put(o.toString(), "");
 			}
-			payload.putObject("bcc", bcc);
+			payload.put("bcc", bcc);
 		}
 		req.end(payload.encode());
 	}

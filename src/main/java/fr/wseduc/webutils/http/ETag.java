@@ -16,8 +16,8 @@
 
 package fr.wseduc.webutils.http;
 
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.HttpServerResponse;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 
 public class ETag {
 

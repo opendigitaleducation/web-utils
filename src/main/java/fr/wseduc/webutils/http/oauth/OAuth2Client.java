@@ -19,21 +19,18 @@ package fr.wseduc.webutils.http.oauth;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.util.Base64;
 import java.util.Map;
 
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpClient;
-import org.vertx.java.core.http.HttpClientRequest;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.core.json.impl.Base64;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.*;
+import io.vertx.core.json.JsonObject;
 
 import fr.wseduc.webutils.http.Renders;
-import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.logging.impl.LoggerFactory;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 import static fr.wseduc.webutils.Utils.isNotEmpty;
 
@@ -50,12 +47,13 @@ public class OAuth2Client {
 
 	public OAuth2Client(URI uri, String clientId, String secret, String authorizeUrn,
 			String tokenUrn, String redirectUri, Vertx vertx, int poolSize) {
-		this.httpClient = vertx.createHttpClient()
-				.setHost(uri.getHost())
-				.setPort(uri.getPort())
-				.setSSL("https".equals(uri.getScheme()))
+		HttpClientOptions options = new HttpClientOptions()
+				.setDefaultHost(uri.getHost())
+				.setDefaultPort(uri.getPort())
+				.setSsl("https".equals(uri.getScheme()))
 				.setMaxPoolSize(poolSize)
 				.setKeepAlive(false);
+		this.httpClient = vertx.createHttpClient(options);
 		this.uri = uri;
 		this.clientId = clientId;
 		this.secret = secret;
@@ -98,17 +96,17 @@ public class OAuth2Client {
 		String error = request.params().get("error");
 		JsonObject r = new JsonObject();
 		if (state != null && !state.equals(s)) {
-			handler.handle(r.putString("error", "invalid_state"));
+			handler.handle(r.put("error", "invalid_state"));
 			return;
 		}
 		if (error != null) {
-			handler.handle(r.putString("error", error));
+			handler.handle(r.put("error", error));
 			return;
 		}
 		try {
 			getAccessToken(code, basic, handler);
 		} catch (UnsupportedEncodingException e) {
-			handler.handle(r.putString("error", e.getMessage()));
+			handler.handle(r.put("error", e.getMessage()));
 		}
 	}
 
@@ -130,11 +128,11 @@ public class OAuth2Client {
 						JsonObject j = new JsonObject(r.toString("UTF-8"));
 						if (response.statusCode() == 200) {
 							JsonObject json = new JsonObject()
-							.putString("status", "ok")
-							.putObject("token", j);
+							.put("status", "ok")
+							.put("token", j);
 							handler.handle(json);
 						} else {
-							handler.handle(j.putNumber("statusCode", response.statusCode()));
+							handler.handle(j.put("statusCode", response.statusCode()));
 						}
 					}
 				});
@@ -144,7 +142,7 @@ public class OAuth2Client {
 				"&redirect_uri=" + redirectUri;
 		if (basic) {
 		req.headers()
-			.add("Authorization", "Basic " + Base64.encodeBytes(
+			.add("Authorization", "Basic " + Base64.getEncoder().encode(
 					(clientId + ":" + secret).getBytes("UTF-8")));
 		} else {
 			body += "&client_id=" + clientId + "&client_secret=" + secret;
@@ -168,20 +166,20 @@ public class OAuth2Client {
 						JsonObject j = new JsonObject(r.toString("UTF-8"));
 						if (response.statusCode() == 200) {
 							JsonObject json = new JsonObject()
-									.putString("status", "ok")
-									.putObject("token", j);
+									.put("status", "ok")
+									.put("token", j);
 							handler.handle(json);
 						} else {
-							handler.handle(j.putNumber("statusCode", response.statusCode()));
+							handler.handle(j.put("statusCode", response.statusCode()));
 						}
 					}
 				});
 			}
 		});
 		req.headers()
-				.add("Authorization", "Basic " + Base64.encodeBytes(
+				.add("Authorization", "Basic " + Base64.getEncoder().encode(
 						(clientId + ":" + secret).getBytes("UTF-8")))
-				.add("Content-Type", "application/x-www-form-urlencoded")
+		.add("Content-Type", "application/x-www-form-urlencoded")
 				.add("Accept", "application/json; charset=UTF-8");
 		String body = "grant_type=client_credentials";
 		if (scope != null && !scope.trim().isEmpty()) {
@@ -270,7 +268,7 @@ public class OAuth2Client {
 				.add("Authorization", "Bearer " + accessToken)
 				.add("Accept", acceptMimeType);
 		if (customHeaders != null) {
-			req.headers().add(customHeaders);
+			req.headers().addAll(customHeaders);
 		}
 		if (body != null) {
 			req.end(body);

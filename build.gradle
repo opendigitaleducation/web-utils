@@ -1,58 +1,68 @@
-apply from: "gradle/vertx.gradle"
+plugins {
+  id 'java'
+  id 'maven'
+}
+
+repositories {
+  jcenter()
+  maven {
+    url "https://oss.sonatype.org/content/repositories/iovertx-3720/"
+  }
+}
+
+sourceCompatibility = '1.8'
 
 dependencies {
+  compile "io.vertx:vertx-core:$vertxVersion"
 	compile "com.samskivert:jmustache:$mustacheVersion"
 	compile "fr.wseduc:eventbus-wrapper:$eventbusWrapperVersion"
-//  compile "org.owasp.esapi:esapi:$esapiVersion"
 }
 
-javadoc {
-    options.encoding = 'UTF-8'
-    classpath = configurations.provided
-    classpath += configurations.compile
+install {
+  repositories.mavenInstaller {
+    pom.version = "$version"
+    pom.artifactId = 'web-utils'
+    pom.groupId = 'fr.wseduc'
+  }
 }
-
-test {
-}
-
 
 def configurePom(def pom) {
-	pom.project {
+  pom.project {
     name 'web-utils'
-		description 'Vert.x web utils framework'
-		inceptionYear '2013'
-		packaging 'jar'
-		url 'https://github.com/web-education/web-utils'
+    description 'Vert.x web utils framework'
+    inceptionYear '2013'
+    packaging 'jar'
+    url 'https://github.com/web-education/web-utils'
 
-		developers {
-			developer {
-				id 'rafik.djedjig'
-				name 'Rafik Djedjig'
-				email 'rafik.djedjig@web-education.net'
-			}
+    developers {
+      developer {
+        id 'rafik.djedjig'
+        name 'Rafik Djedjig'
+        email 'rafik.djedjig@web-education.net'
+      }
       developer {
         id 'dboissin'
         name 'Damien BOISSIN'
         email 'damien.boissin@web-education.net'
       }
-		}
+    }
 
-		scm {
+    scm {
       connection 'scm:git:ssh://git@github.com:web-education/web-utils.git'
       developerConnection 'scm:git:ssh://git@github.com:web-education/web-utils.git'
       url 'https://github.com/web-education/web-utils.git'
-		}
+    }
 
-		licenses {
-			license {
+    licenses {
+      license {
         name 'The Apache Software License, Version 2.0'
         url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-				distribution 'repo'
-			}
-		}
+        distribution 'repo'
+      }
+    }
 
-		properties {
-			setProperty('project.build.sourceEncoding', 'UTF8')
-		}
-	}
+    properties {
+      setProperty('project.build.sourceEncoding', 'UTF8')
+    }
+  }
 }

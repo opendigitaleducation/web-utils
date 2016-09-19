@@ -16,11 +16,11 @@
 
 package fr.wseduc.webutils.security;
 
-import org.vertx.java.core.json.impl.Base64;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.GeneralSecurityException;
+import java.util.Base64;
 
 public class Blowfish {
 
@@ -30,7 +30,7 @@ public class Blowfish {
 		Cipher cipher = Cipher.getInstance("Blowfish");
 		cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
 		byte[] b = cipher.doFinal(data.getBytes());
-		return Base64.encodeBytes(b);
+		return Base64.getEncoder().encodeToString(b);
 	}
 
 	public static String decrypt(String data, String key) throws GeneralSecurityException {
@@ -38,7 +38,7 @@ public class Blowfish {
 		SecretKeySpec secretKeySpec = new SecretKeySpec(keyData, "Blowfish");
 		Cipher cipher = Cipher.getInstance("Blowfish");
 		cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
-		byte[] b = cipher.doFinal(Base64.decode(data));
+		byte[] b = cipher.doFinal(Base64.getDecoder().decode(data));
 		return new String(b);
 	}
 

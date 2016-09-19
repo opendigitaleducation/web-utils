@@ -30,15 +30,12 @@ import java.util.regex.Pattern;
 
 import fr.wseduc.webutils.request.AccessLogger;
 import fr.wseduc.webutils.request.filter.XSSHandler;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.VoidHandler;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.RouteMatcher;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.platform.Container;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 
 import fr.wseduc.webutils.http.Binding;
 import fr.wseduc.webutils.http.HttpMethod;
@@ -46,6 +43,7 @@ import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.filter.SecurityHandler;
 import fr.wseduc.webutils.security.ActionType;
 import fr.wseduc.webutils.security.SecuredAction;
+import org.vertx.java.core.http.RouteMatcher;
 
 public abstract class Controller extends Renders {
 
@@ -57,9 +55,9 @@ public abstract class Controller extends Renders {
 	protected String busPrefix = "";
 	private AccessLogger accessLogger;
 
-	public Controller(Vertx vertx, Container container, RouteMatcher rm,
+	public Controller(Vertx vertx, JsonObject config, RouteMatcher rm,
 			Map<String, SecuredAction> securedActions) {
-		super(vertx, container);
+		super(vertx, config);
 		this.rm = rm;
 		this.uriBinding = new HashMap<>();
 		this.securedActions = securedActions;
@@ -148,15 +146,12 @@ public abstract class Controller extends Renders {
 
 				@Override
 				public void filter(final HttpServerRequest request) {
-					accessLogger.log(request, new VoidHandler() {
-						@Override
-						protected void handle() {
-							try {
-								mh.invokeExact(request);
-							} catch (Throwable e) {
-								log.error("Error invoking secured method : " + method, e);
-								request.response().setStatusCode(500).end();
-							}
+					accessLogger.log(request, v -> {
+						try {
+							mh.invokeExact(request);
+						} catch (Throwable e) {
+							log.error("Error invoking secured method : " + method, e);
+							request.response().setStatusCode(500).end();
 						}
 					});
 				}
@@ -214,17 +209,17 @@ public abstract class Controller extends Renders {
 				try {
 					mh.invokeExact(message);
 				} catch (Throwable e) {
-					container.logger().error(e.getMessage(), e);
-					JsonObject json = new JsonObject().putString("status", "error")
-							.putString("message", e.getMessage());
+					log.error(e.getMessage(), e);
+					JsonObject json = new JsonObject().put("status", "error")
+							.put("message", e.getMessage());
 					message.reply(json);
 				}
 			}
 		};
 		if (local) {
-			Server.getEventBus(vertx).registerLocalHandler(busPrefix + address, handler);
+			Server.getEventBus(vertx).localConsumer(busPrefix + address, handler);
 		} else {
-			Server.getEventBus(vertx).registerHandler(busPrefix + address, handler);
+			Server.getEventBus(vertx).consumer(busPrefix + address, handler);
 		}
 	}
 
