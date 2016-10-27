@@ -79,7 +79,7 @@ public class CookieHelper {
 		if (path != null && !path.trim().isEmpty()) {
 			cookie.setPath(path);
 		}
-		request.response().headers().set("Set-Cookie", ServerCookieEncoder.encode(cookie));
+		request.response().headers().add("Set-Cookie", ServerCookieEncoder.encode(cookie));
 	}
 
 	public void setSigned(String name, String value, long timeout, HttpServerRequest request) {
@@ -101,7 +101,7 @@ public class CookieHelper {
 				log.error(e);
 				return;
 			}
-			request.response().headers().set("Set-Cookie", ServerCookieEncoder.encode(cookie));
+			request.response().headers().add("Set-Cookie", ServerCookieEncoder.encode(cookie));
 		}
 	}
 

@@ -82,4 +82,14 @@ public class AlgorithmTest {
 		assertEquals("{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"admin\":true}", j.encode());
 	}
 
+	@Test
+	public void verifyJWTHS256FC() {
+		// {"access_token":"348391a1860838acc29699b3b9d5462330122a2fb7c9addfc0f3cae99e58572f","token_type":"Bearer","expires_in":1200,"id_token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2ZjcC5pbnRlZzAxLmRldi1mcmFuY2Vjb25uZWN0LmZyIiwic3ViIjoiNDVjNGQyNTA4ZjdiZTUwMGI1Y2Q1MzVkNzg4OGVmNjViMmNkZmM5NGYwY2NlY2Y2ZjgyMjA1NzQwOGVlNTQwNXYxIiwiYXVkIjoiNTgwNWMyNzM4YzEzMzY3ZjBkOGY5YzE3YzI1ODMxZDU2MGRmYzEzYTY0ODQwM2UzNGZjNzc4NmVkMzA1MmY0NSIsImV4cCI6MTQ3NzU3OTQwNiwiaWF0IjoxNDc3NTc4MjA2LCJub25jZSI6ImU2NDE1NzgwLWUxNDAtNDEzOS04NTQ0LTZhMTZhNDBiNzhiYSIsImlkcCI6IkZDIiwiYWNyIjoiZWlkYXMyIiwiYW1yIjpbXX0.LbfsxNCYTf2unSKSFbpjU5dLnH3ItVZYYQwBZSu9bAU"}
+
+		final String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2ZjcC5pbnRlZzAxLmRldi1mcmFuY2Vjb25uZWN0LmZyIiwic3ViIjoiNDVjNGQyNTA4ZjdiZTUwMGI1Y2Q1MzVkNzg4OGVmNjViMmNkZmM5NGYwY2NlY2Y2ZjgyMjA1NzQwOGVlNTQwNXYxIiwiYXVkIjoiNTgwNWMyNzM4YzEzMzY3ZjBkOGY5YzE3YzI1ODMxZDU2MGRmYzEzYTY0ODQwM2UzNGZjNzc4NmVkMzA1MmY0NSIsImV4cCI6MTQ3NzU3OTQwNiwiaWF0IjoxNDc3NTc4MjA2LCJub25jZSI6ImU2NDE1NzgwLWUxNDAtNDEzOS04NTQ0LTZhMTZhNDBiNzhiYSIsImlkcCI6IkZDIiwiYWNyIjoiZWlkYXMyIiwiYW1yIjpbXX0.LbfsxNCYTf2unSKSFbpjU5dLnH3ItVZYYQwBZSu9bAU";
+		JsonObject j = JWT.verifyAndGet(token, "19087ca48a95b7b81768a968ead91aa2d1e2b88e74e253589af4a3071cb2e14c");
+		System.out.println(j.encodePrettily());
+		assertEquals("{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"admin\":true}", j.encode());
+	}
+
 }

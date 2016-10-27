@@ -32,9 +32,14 @@ import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.json.impl.Base64;
 
 import fr.wseduc.webutils.http.Renders;
+import org.vertx.java.core.logging.Logger;
+import org.vertx.java.core.logging.impl.LoggerFactory;
+
+import static fr.wseduc.webutils.Utils.isNotEmpty;
 
 public class OAuth2Client {
 
+	protected static final Logger log = LoggerFactory.getLogger(OAuth2Client.class);
 	private final URI uri;
 	private final String clientId;
 	private final String secret;
@@ -64,6 +69,10 @@ public class OAuth2Client {
 	}
 
 	public void authorizeRedirect(HttpServerRequest request, String state, String scope) {
+		authorizeRedirect(request, state, null, scope);
+	}
+
+	public void authorizeRedirect(HttpServerRequest request, String state, String nonce, String scope) {
 		String rUri = "";
 		try {
 			rUri = URLEncoder.encode(redirectUri, "UTF-8");
@@ -71,6 +80,7 @@ public class OAuth2Client {
 			e.printStackTrace();
 		}
 		String params = "response_type=code&client_id=" + clientId + "&state=" + state +
+				(isNotEmpty(nonce) ? "&nonce=" + nonce : "") +
 				"&redirect_uri=" + rUri + "&scope=" + scope;
 
 		Renders.redirect(request, uri.toString(), authorizeUrn + "?" + params);

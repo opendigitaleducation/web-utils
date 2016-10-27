@@ -274,7 +274,7 @@ public final class JWT {
 				}
 			break;
 			case HS256:
-				verifyAndGet(token, secret);
+				handler.handle(verifyAndGet(token, secret));
 				break;
 			default:
 				log.error("Unsupported signature algorithm.");
