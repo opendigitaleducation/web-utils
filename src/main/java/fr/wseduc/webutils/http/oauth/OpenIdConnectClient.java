@@ -33,6 +33,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 
 	private final JWT jwt;
 	private String userInfoUrn;
+	private boolean basic = true;
 
 	public OpenIdConnectClient(URI uri, String clientId, String secret, String authorizeUrn,
 			String tokenUrn, String redirectUri, Vertx vertx, int poolSize, String certificatesUri)
@@ -43,30 +44,43 @@ public final class OpenIdConnectClient extends OAuth2Client {
 
 	@Override
 	public void authorizationCodeToken(HttpServerRequest request, String state, Handler<JsonObject> handler) {
-		authorizationCodeToken(request, state, true, handler);
+		authorizationCodeToken(request, state, null, handler);
 	}
 
-	@Override
-	public void authorizationCodeToken(HttpServerRequest request, String state, boolean basic,
+	public void authorizationCodeToken(HttpServerRequest request, String state, final String nonce,
 			final Handler<JsonObject> handler) {
 		super.authorizationCodeToken(request, state, basic, new Handler<JsonObject>() {
 			@Override
 			public void handle(JsonObject res) {
 				if ("ok".equals(res.getString("status"))) {
-					final JsonObject token = res.getObject("token", new JsonObject());
-					String idToken = token.getString("id_token");
-					Handler<JsonObject> h;
-					if (isNotEmpty(userInfoUrn)) {
-						h = new Handler<JsonObject>() {
-							@Override
-							public void handle(JsonObject payload) {
-								getUserInfo(token.getString("access_token"), payload, handler);
-							}
-						};
-					} else {
-						h = handler;
+					final JsonObject token = res.getObject("token");
+					if (token == null) {
+						log.error("invalid token");
+						handler.handle(null);
+						return;
 					}
-					jwt.verifyAndGet(idToken, h);
+					String idToken = token.getString("id_token");
+					jwt.verifyAndGet(idToken, new Handler<JsonObject>() {
+						@Override
+						public void handle(JsonObject payload) {
+							if (payload == null) {
+								log.error("invalid payload.");
+								handler.handle(null);
+								return;
+							}
+							final String nce = payload.getString("nonce");
+							if (nce != null && !nce.equals(nonce)) {
+								log.error("invalid nonce");
+								handler.handle(null);
+								return;
+							}
+							if (isNotEmpty(userInfoUrn)) {
+								getUserInfo(token.getString("access_token"), payload, handler);
+							} else {
+								handler.handle(payload);
+							}
+						}
+					});
 				} else {
 					handler.handle(null);
 				}
@@ -75,10 +89,6 @@ public final class OpenIdConnectClient extends OAuth2Client {
 	}
 
 	private void getUserInfo(String accessToken, final JsonObject payload, final Handler<JsonObject> handler) {
-		if (payload == null) {
-			handler.handle(null);
-			return;
-		}
 		getProtectedResource(userInfoUrn, accessToken, new Handler<HttpClientResponse>() {
 			@Override
 			public void handle(HttpClientResponse resp) {
@@ -105,6 +115,10 @@ public final class OpenIdConnectClient extends OAuth2Client {
 
 	public void setUserInfoUrn(String userInfoUrn) {
 		this.userInfoUrn = userInfoUrn;
+	}
+
+	public void setBasic(boolean basic) {
+		this.basic = basic;
 	}
 
 }
