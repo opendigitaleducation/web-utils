@@ -24,8 +24,10 @@ import org.vertx.java.core.http.HttpClientResponse;
 import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.json.JsonObject;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 
 import static fr.wseduc.webutils.Utils.isNotEmpty;
 
@@ -34,6 +36,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 	private final JWT jwt;
 	private String userInfoUrn;
 	private boolean basic = true;
+	private String logoutUri;
 
 	public OpenIdConnectClient(URI uri, String clientId, String secret, String authorizeUrn,
 			String tokenUrn, String redirectUri, Vertx vertx, int poolSize, String certificatesUri)
@@ -59,7 +62,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 						handler.handle(null);
 						return;
 					}
-					String idToken = token.getString("id_token");
+					final String idToken = token.getString("id_token");
 					jwt.verifyAndGet(idToken, new Handler<JsonObject>() {
 						@Override
 						public void handle(JsonObject payload) {
@@ -74,6 +77,7 @@ public final class OpenIdConnectClient extends OAuth2Client {
 								handler.handle(null);
 								return;
 							}
+							payload.putString("id_token_hint", idToken);
 							if (isNotEmpty(userInfoUrn)) {
 								getUserInfo(token.getString("access_token"), payload, handler);
 							} else {
@@ -113,8 +117,26 @@ public final class OpenIdConnectClient extends OAuth2Client {
 		});
 	}
 
+	public String logoutUri(String state, String hint, String callback) {
+		if (isNotEmpty(logoutUri)) {
+			StringBuilder sb = new StringBuilder();
+			try {
+				sb.append(logoutUri).append("?id_token_hint=").append(hint).append("&state=").append(state)
+						.append("&post_logout_redirect_uri=").append(URLEncoder.encode(callback, "UTF-8"));
+				return sb.toString();
+			} catch (UnsupportedEncodingException e) {
+				log.error(e.getMessage(), e);
+			}
+		}
+		return callback;
+	}
+
 	public void setUserInfoUrn(String userInfoUrn) {
 		this.userInfoUrn = userInfoUrn;
+	}
+
+	public void setLogoutUri(String logoutUri) {
+		this.logoutUri = logoutUri;
 	}
 
 	public void setBasic(boolean basic) {
