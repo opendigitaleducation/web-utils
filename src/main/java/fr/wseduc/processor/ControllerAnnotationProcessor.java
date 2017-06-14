@@ -49,9 +49,8 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 		return false;
 	}
 
-	private void apiDoc(RoundEnvironment roundEnv) {
-		final Map<String,Set<String>> apis = new HashMap<>();
-
+	private void apiDoc(RoundEnvironment roundEnv){
+		final Map<String,Set<String>> paths = new HashMap<>();
 		String prefix = "";
 		for (Element element : roundEnv.getElementsAnnotatedWith(ApiPrefixDoc.class)) {
 			ApiPrefixDoc annotation = element.getAnnotation(ApiPrefixDoc.class);
@@ -82,20 +81,48 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 			}
 			String path;
 			String method;
+			StringBuilder sbParam = new StringBuilder();
+			String queryParam;
+			String bodyParam;
 			if (getAnnotation != null) {
 				path = getAnnotation.value();
+				queryParam = getAnnotation.queryParams();
+				bodyParam = getAnnotation.bodyParams();
 				method = "GET";
 			} else if (postAnnotation != null) {
 				path = postAnnotation.value();
+				queryParam = postAnnotation.queryParams();
+				bodyParam = postAnnotation.bodyParams();
 				method = "POST";
 			} else if (putAnnotation != null) {
 				path = putAnnotation.value();
+				queryParam = putAnnotation.queryParams();
+				bodyParam = putAnnotation.bodyParams();
 				method = "PUT";
 			} else {
 				path = deleteAnnotation.value();
+				queryParam = deleteAnnotation.queryParams();
+				bodyParam = deleteAnnotation.bodyParams();
 				method = "DELETE";
 			}
+			if(path.contains(":")){
+				String[] pathElements = path.split("/");
+				for (String s: pathElements) {
+					if(s.startsWith(":")){
+						sbParam.append("{\"in\":\"path\",\"name\":\""+s.substring(1)+"\",\"description\":\"Path parameter\",\"required\":true},");
+					}
 
+				}
+			}
+			if(queryParam.length() > 0){
+				sbParam.append("{\"in\":\"query\",\"name\":\""+queryParam+"\",\"description\":\"Query parameter\",\"required\":true},");
+			}
+
+			if(bodyParam.length() > 0){
+				sbParam.append("{\"in\":\"body\",\"name\":\""+bodyParam+"\",\"description\":\"Body parameter\",\"required\":true,\"schema\":{\"$ref\": \"#/definitions/"+bodyParam+".json\"}},");
+			}
+			if(sbParam.length() > 0)
+				sbParam.deleteCharAt(sbParam.length() - 1);
 			String notes = "";
 			if (securedAnnotation != null) {
 				switch (securedAnnotation.type()) {
@@ -112,31 +139,36 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 			} else {
 				notes = "";
 			}
-			Set<String> controllerRoutes = getController(apis, clazz);
-			controllerRoutes.add("{ \"path\" : \"" + prefix + path + "\", \"operations\" : [{" +
-					"\"method\" : \"" + method + "\", " +
+			Set<String> controllerRoutes = paths.get(path);
+			if (controllerRoutes == null) {
+				controllerRoutes = new TreeSet<>(Collections.reverseOrder());
+				paths.put(path, controllerRoutes);
+			}
+			controllerRoutes.add("\""+method.toLowerCase()+"\":{"+
+					"\"tags\":[\""+clazz.getQualifiedName().toString()+"\"],"+
 					"\"summary\" : \"" + annotation.value() + "\"," +
-					"\"notes\" : \"" + notes + "\", " +
-					"\"nickname\" : \"" + clazz.getQualifiedName().toString() + "_" +
+					"\"description\" : \"" + notes + "\", " +
+					"\"operationId\" : \"" + clazz.getQualifiedName().toString() + "_" +
 					element.getSimpleName().toString() + "\", " +
-					"\"parameters\" : [] " +
-					"}]}");
+					"\"parameters\" : ["+ sbParam +"] " +"}");
 		}
-
 		final Map<String,Set<String>> swagger = new HashMap<>();
-		for (Map.Entry<String, Set<String>> entry : apis.entrySet()) {
-			StringBuilder sb = new StringBuilder();
-			sb.append("{\"swaggerVersion\":\"1.2\", \"resourcePath\" : \"")
-					.append(prefix).append("\", \"apis\" : [");
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\"swagger\":\"2.0\",\"info\":{\"version\":\"1.0.0\",\"title\":\"Swagger Doc "+prefix+"\"},\"basePath\" : \"")
+				.append(prefix).append("\", \"paths\" : {");
+		for (Map.Entry<String, Set<String>> entry : paths.entrySet()){
+			sb.append("\""+entry.getKey()+"\":{");
 			for (String s : entry.getValue()) {
 				sb.append(s).append(",");
 			}
 			sb.deleteCharAt(sb.length() - 1);
-			sb.append("]}");
-			Set<String> s = new HashSet<>();
-			s.add(sb.toString());
-			swagger.put(entry.getKey(), s);
+			sb.append("},");
 		}
+		sb.deleteCharAt(sb.length() - 1);
+		sb.append("}");
+		Set<String> s = new HashSet<>();
+		s.add(sb.toString());
+		swagger.put("doc", s);
 		writeFile("Swagger-", swagger);
 	}
 
