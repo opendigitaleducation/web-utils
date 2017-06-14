@@ -28,4 +28,8 @@ public @interface Post {
 
 	boolean regex() default false;
 
+	String queryParams() default "";
+
+	String bodyParams() default "";
+
 }

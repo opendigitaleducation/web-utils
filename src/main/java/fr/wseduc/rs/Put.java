@@ -28,4 +28,8 @@ public @interface Put {
 
 	boolean regex() default false;
 
+	String queryParams() default "";
+
+	String bodyParams() default "";
+
 }
