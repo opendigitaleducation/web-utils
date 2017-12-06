@@ -16,6 +16,8 @@
 
 package fr.wseduc.webutils;
 
+import fr.wseduc.webutils.eventbus.ResultMessage;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.eventbus.Message;
@@ -178,6 +180,16 @@ public class Utils {
 
 	public static boolean isNotEmpty(String string) {
 		return !isEmpty(string);
+	}
+
+	public static Handler<AsyncResult<Message<JsonObject>>> handlerToAsyncHandler(Handler<Message<JsonObject>> handler) {
+		return event -> {
+			if (event.succeeded()) {
+				handler.handle(event.result());
+			} else {
+				handler.handle(new ResultMessage().error(event.cause().getMessage()));
+			}
+		};
 	}
 
 }

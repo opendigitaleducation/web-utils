@@ -35,7 +35,7 @@ import java.util.*;
 @SupportedAnnotationTypes({"fr.wseduc.security.SecuredAction", "fr.wseduc.bus.BusAddress",
 		"fr.wseduc.rs.Get", "fr.wseduc.rs.Post", "fr.wseduc.rs.Delete", "fr.wseduc.rs.Put",
 		"fr.wseduc.rs.ApiDoc", "fr.wseduc.rs.ApiPrefixDoc"})
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class ControllerAnnotationProcessor extends AbstractProcessor {
 
 	@Override

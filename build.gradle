@@ -10,12 +10,20 @@ repositories {
   }
 }
 
+configurations {
+  provided
+}
+
+sourceSets {
+  main { compileClasspath += configurations.provided }
+}
+
 sourceCompatibility = '1.8'
 
 dependencies {
-  compile "io.vertx:vertx-core:$vertxVersion"
-	compile "com.samskivert:jmustache:$mustacheVersion"
-	compile "fr.wseduc:eventbus-wrapper:$eventbusWrapperVersion"
+  provided "io.vertx:vertx-core:$vertxVersion"
+  compile "com.samskivert:jmustache:$mustacheVersion"
+  compile "fr.wseduc:eventbus-wrapper:$eventbusWrapperVersion"
 }
 
 install {
