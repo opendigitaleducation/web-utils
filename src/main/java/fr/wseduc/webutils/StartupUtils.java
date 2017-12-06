@@ -132,7 +132,7 @@ public class StartupUtils {
 	}
 
 	public static JsonArray loadSecuredActions(Vertx vertx) throws IOException {
-		List<String> list = vertx.fileSystem().readDirBlocking(".", "^SecuredAction-.*json$");
+		List<String> list = vertx.fileSystem().readDirBlocking("securedaction", "^SecuredAction-.*json$");
 		JsonArray securedActions = new JsonArray();
 		for (String f : list) {
 			BufferedReader in = null;

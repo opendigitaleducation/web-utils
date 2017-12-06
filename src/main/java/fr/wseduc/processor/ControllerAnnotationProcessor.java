@@ -243,11 +243,15 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 	}
 
 	protected void writeFile(String prefixFilename, Map<String, Set<String>> actions) {
+		writeFile(prefixFilename, getPackage(prefixFilename), actions);
+	}
+
+	protected void writeFile(String prefixFilename, String pkg, Map<String, Set<String>> actions) {
 		Filer filer = processingEnv.getFiler();
 		for (Map.Entry<String,Set<String>> e : actions.entrySet()) {
 			try {
 				String controller = e.getKey();
-				FileObject f = filer.getResource(StandardLocation.CLASS_OUTPUT, "",
+				FileObject f = filer.getResource(StandardLocation.CLASS_OUTPUT, pkg,
 						prefixFilename + controller + ".json");
 				BufferedReader r = new BufferedReader(new InputStreamReader(f.openInputStream(), "UTF-8"));
 				String line;
@@ -266,7 +270,7 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 			try {
 				String path = prefixFilename + e.getKey() + ".json";
 				processingEnv.getMessager().printMessage(Kind.NOTE,"Writing "+ path);
-				FileObject f = filer.createResource(StandardLocation.CLASS_OUTPUT, "", path);
+				FileObject f = filer.createResource(StandardLocation.CLASS_OUTPUT, pkg, path);
 				PrintWriter pw = new PrintWriter(new OutputStreamWriter(f.openOutputStream(), "UTF-8"));
 				for (String value : e.getValue()) {
 					pw.println(value);
@@ -276,6 +280,10 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 				error("Failed to write secured actions : " + ex);
 			}
 		}
+	}
+
+	protected String getPackage(String prefixFilename) {
+		return (prefixFilename.isEmpty()) ? "routes" : prefixFilename.replaceAll("\\-", "").toLowerCase();
 	}
 
 	protected boolean isMethod(Element element) {

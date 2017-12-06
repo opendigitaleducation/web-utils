@@ -71,7 +71,7 @@ public abstract class Controller extends Renders {
 	}
 
 	protected void loadRoutes() {
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream(
+		InputStream is = this.getClass().getClassLoader().getResourceAsStream("routes" + File.separator +
 				this.getClass().getName() + ".json");
 		if (is != null) {
 			BufferedReader r = null;
