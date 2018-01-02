@@ -184,7 +184,7 @@ public class SecureHttpServerRequest implements HttpServerRequest {
 
 	@Override
 	public String absoluteURI() {
-		return null;
+		return request.absoluteURI();
 	}
 
 	@Override
