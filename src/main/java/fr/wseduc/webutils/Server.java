@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.*;
 
 import fr.wseduc.vertx.eventbus.EventBusWrapperFactory;
+import fr.wseduc.webutils.data.FileResolver;
 import fr.wseduc.webutils.http.BaseController;
 import fr.wseduc.webutils.http.Binding;
 import fr.wseduc.webutils.http.Renders;
@@ -58,6 +59,7 @@ public abstract class Server extends AbstractVerticle {
 	public void start() throws Exception {
 		super.start();
 		config = config();
+		FileResolver.getInstance().setBasePath(config);
 		rm = new RouteMatcher();
 		trace = TracerFactory.getTracer(this.getClass().getSimpleName());
 		i18n = I18n.getInstance();
@@ -135,6 +137,7 @@ public abstract class Server extends AbstractVerticle {
 			.put("prefix", getPathPrefix(config));
 			JsonArray actions = StartupUtils.loadSecuredActions(vertx);
 			securedActions = StartupUtils.securedActionsToMap(actions);
+			log.info("secureaction loaded : " + actions.encode());
 			if (config.getString("integration-mode","BUS").equals("HTTP")) {
 				StartupUtils.sendStartup(application, actions, vertx,
 						config.getInteger("app-registry.port", 8012));
@@ -193,6 +196,7 @@ public abstract class Server extends AbstractVerticle {
 	}
 
 	protected Server addController(BaseController controller) {
+		log.info("add controller");
 		controller.init(vertx, config, rm, securedActions);
 		securedUriBinding.addAll(controller.securedUriBinding());
 		return this;

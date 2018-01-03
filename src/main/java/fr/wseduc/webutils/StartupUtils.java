@@ -41,6 +41,8 @@ import fr.wseduc.webutils.security.SecuredAction;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import static fr.wseduc.webutils.data.FileResolver.absolutePath;
+
 public class StartupUtils {
 
 	private static final Logger log = LoggerFactory.getLogger(StartupUtils.class);
@@ -132,7 +134,7 @@ public class StartupUtils {
 	}
 
 	public static JsonArray loadSecuredActions(Vertx vertx) throws IOException {
-		List<String> list = vertx.fileSystem().readDirBlocking("securedaction", "^SecuredAction-.*json$");
+		List<String> list = vertx.fileSystem().readDirBlocking(absolutePath("securedaction"), "^SecuredAction-.*json$");
 		JsonArray securedActions = new JsonArray();
 		for (String f : list) {
 			BufferedReader in = null;

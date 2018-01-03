@@ -41,6 +41,7 @@ import fr.wseduc.webutils.I18n;
 import fr.wseduc.webutils.Server;
 
 import static fr.wseduc.webutils.Utils.isNotEmpty;
+import static fr.wseduc.webutils.data.FileResolver.absolutePath;
 
 public class Renders {
 
@@ -238,7 +239,7 @@ public class Renders {
 		if (!"dev".equals(config.getString("mode")) && templates.containsKey(path)) {
 			handler.handle(templates.get(path));
 		} else {
-			final String p = config.getString("cwd", "") + path;
+			final String p = absolutePath(path);
 			vertx.fileSystem().readFile(p, new Handler<AsyncResult<Buffer>>() {
 				@Override
 				public void handle(AsyncResult<Buffer> ar) {

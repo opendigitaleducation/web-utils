@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import fr.wseduc.webutils.data.FileResolver;
 import fr.wseduc.webutils.security.SecureHttpServerRequest;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
@@ -33,7 +34,7 @@ import io.vertx.core.logging.LoggerFactory;
 public class I18n {
 
 	private static final Logger log = LoggerFactory.getLogger(I18n.class);
-	private final static String messagesDir = "./i18n";
+	private final static String messagesDir = FileResolver.absolutePath("i18n");
 	private final static Locale defaultLocale = Locale.FRENCH;
 	public final static String DEFAULT_DOMAIN = "default-domain";
 	private Map<String, Map<Locale, JsonObject>> messagesByDomains = new HashMap<>();

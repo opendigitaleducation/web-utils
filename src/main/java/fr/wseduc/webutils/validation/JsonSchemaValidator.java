@@ -16,6 +16,7 @@
 
 package fr.wseduc.webutils.validation;
 
+import fr.wseduc.webutils.data.FileResolver;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -34,7 +35,7 @@ import java.util.List;
 
 public class JsonSchemaValidator {
 
-	private static final String JSONSCHEMA_PATH = "jsonschema";
+	private static final String JSONSCHEMA_PATH = FileResolver.absolutePath("jsonschema");
 	private String address;
 	private EventBus eb;
 	private static final Logger log = LoggerFactory.getLogger(JsonSchemaValidator.class);
