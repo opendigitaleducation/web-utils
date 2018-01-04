@@ -43,6 +43,8 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.LocalMap;
 import org.vertx.java.core.http.RouteMatcher;
 
+import static fr.wseduc.webutils.data.FileResolver.absolutePath;
+
 public abstract class Server extends AbstractVerticle {
 
 	protected static final Logger log = LoggerFactory.getLogger(Server.class);
@@ -72,35 +74,26 @@ public abstract class Server extends AbstractVerticle {
 		log.info("Verticle: " + this.getClass().getSimpleName() + " starts on port: " + config.getInteger("port"));
 
 		final String prefix = getPathPrefix(config);
+
 		// Serve public static resource like img, css, js. By convention in /public directory
-		// Dummy impl
-		rm.getWithRegEx(prefix.replaceAll("\\/", "\\/") + "\\/public\\/.+",
-				new Handler<HttpServerRequest>() {
-			public void handle(final HttpServerRequest request) {
-				if (dev) {
-					request.response().sendFile("." + request.path().substring(prefix.length()));
+		rm.getWithRegEx(prefix.replaceAll("\\/", "\\/") + "\\/public\\/.+", request -> {
+			final String path = absolutePath(request.path().substring(prefix.length() + 1));
+			if (dev) {
+				request.response().sendFile(path);
+			} else {
+				if (staticRessources.get(request.uri()) != null) {
+					StaticResource.serveRessource(request,
+							path, staticRessources.get(request.uri()), dev);
 				} else {
-					if (staticRessources.get(request.uri()) != null) {
-						StaticResource.serveRessource(request,
-								"." + request.path().substring(prefix.length()),
-								staticRessources.get(request.uri()), dev);
-					} else {
-						vertx.fileSystem().props("." + request.path().substring(prefix.length()),
-								new Handler<AsyncResult<FileProps>>(){
-							@Override
-							public void handle(AsyncResult<FileProps> af) {
-								if (af.succeeded()) {
-									String lastModified = StaticResource.formatDate(af.result().lastModifiedTime());
-									staticRessources.put(request.uri(), lastModified);
-									StaticResource.serveRessource(request,
-											"." + request.path().substring(prefix.length()),
-											lastModified, dev);
-								} else {
-									request.response().sendFile("." + request.path().substring(prefix.length()));
-								}
-							}
-						});
-					}
+					vertx.fileSystem().props(path, af -> {
+						if (af.succeeded()) {
+							String lastModified = StaticResource.formatDate(af.result().lastModifiedTime());
+							staticRessources.put(request.uri(), lastModified);
+							StaticResource.serveRessource(request, path, lastModified, dev);
+						} else {
+							request.response().sendFile(path);
+						}
+					});
 				}
 			}
 		});
