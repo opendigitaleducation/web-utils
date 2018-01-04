@@ -82,6 +82,7 @@ public class I18n {
 	}
 
 	public String translate(String key, String domain, Locale locale, String... args) {
+		if (key == null) return "";
 		Map<Locale, JsonObject> messages = getMessagesMap(domain);
 		if (messages == null) {
 			return key;
