@@ -16,13 +16,31 @@
 
 package fr.wseduc.webutils.collections;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 
 import java.time.Instant;
+import java.util.Map;
 
 import static fr.wseduc.webutils.Utils.getOrElse;
 
 public class JsonObject extends io.vertx.core.json.JsonObject {
+
+	public JsonObject(String json) {
+		super(json);
+	}
+
+	public JsonObject() {
+		super();
+	}
+
+	public JsonObject(Map<String, Object> map) {
+		super(map);
+	}
+
+	public JsonObject(Buffer buf) {
+		super(buf);
+	}
 
 	@Override
 	public String getString(String key, String def) {

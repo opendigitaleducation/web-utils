@@ -49,6 +49,13 @@ public class Utils {
 		return content;
 	}
 
+	public static JsonObject loadFromResource(String resource) {
+		String src = new Scanner(Utils.class.getClassLoader()
+				.getResourceAsStream(resource), "UTF-8")
+				.useDelimiter("\\A").next();
+		return new fr.wseduc.webutils.collections.JsonObject(src);
+	}
+
 	public static JsonObject validAndGet(JsonObject json, List<String> fields,
 				List<String> requiredFields) {
 		if (json != null) {

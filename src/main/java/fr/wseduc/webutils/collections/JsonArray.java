@@ -16,6 +16,8 @@
 
 package fr.wseduc.webutils.collections;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import java.time.Instant;
@@ -26,6 +28,10 @@ public class JsonArray extends io.vertx.core.json.JsonArray {
 
 	private final List<Object> list;
 
+	public JsonArray(String json) {
+		this(Json.decodeValue(json, List.class));
+	}
+
 	public JsonArray() {
 		this(new ArrayList<>());
 	}
@@ -33,6 +39,10 @@ public class JsonArray extends io.vertx.core.json.JsonArray {
 	public JsonArray(List list) {
 		super(list);
 		this.list = list;
+	}
+
+	public JsonArray(Buffer buf) {
+		this(Json.decodeValue(buf, List.class));
 	}
 
 	@Override
