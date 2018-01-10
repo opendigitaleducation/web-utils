@@ -197,7 +197,7 @@ public class Renders {
 
 	public void processTemplate(final HttpServerRequest request,
 			JsonObject p, String resourceName, Reader r, final Handler<Writer> handler) {
-		final JsonObject params = (p == null) ? new JsonObject() : p;
+		final JsonObject params = (p == null) ? new JsonObject() : p.copy();
 		getTemplate(request, resourceName, r, new Handler<Template>() {
 
 			@Override
