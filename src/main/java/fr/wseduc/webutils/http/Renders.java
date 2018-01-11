@@ -403,15 +403,18 @@ public class Renders {
 	}
 
 	public static String getScheme(HttpServerRequest request) {
-		String proto = request.headers().get("X-Forwarded-Proto");
+		final String proto = request.headers().get("X-Forwarded-Proto");
 		if (proto != null && !proto.trim().isEmpty()) {
 			return proto;
 		}
 		String scheme = null;
-		try {
-			scheme = new URI(request.absoluteURI()).getScheme();
-		} catch (URISyntaxException e) {
-			log.error("Invalid uri", e);
+		final String absoluteUri = request.absoluteURI();
+		if (absoluteUri != null) {
+			try {
+				scheme = new URI(absoluteUri).getScheme();
+			} catch (URISyntaxException e) {
+				log.error("Invalid uri", e);
+			}
 		}
 		if (scheme == null) {
 			scheme = "http";
