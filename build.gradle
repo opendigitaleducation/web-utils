@@ -1,6 +1,7 @@
 plugins {
   id 'java'
   id 'maven'
+  id 'maven-publish'
 }
 
 repositories {
@@ -31,6 +32,36 @@ install {
     pom.version = "$version"
     pom.artifactId = 'web-utils'
     pom.groupId = 'fr.wseduc'
+  }
+}
+
+publishing {
+  repositories {
+    if (version.endsWith("SNAPSHOT")) {
+      maven {
+        name 'Snapshots'
+          url 'https://maven.opendigitaleducation.com/nexus/content/repositories/snapshots/'
+          credentials {
+            username "${odeUsername}"
+              password "${odePassword}"
+          }
+      }
+    } else {
+      maven {
+        name 'Releases'
+          url 'https://maven.opendigitaleducation.com/nexus/content/repositories/releases/'
+          credentials {
+            username "${odeUsername}"
+              password "${odePassword}"
+          }
+      }
+    }
+  }
+  publications {
+    maven(MavenPublication) {
+      groupId "${modowner}"
+      artifact("build/libs/${modname}-${version}.jar")
+    }
   }
 }
 
