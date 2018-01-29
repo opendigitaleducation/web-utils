@@ -113,6 +113,7 @@ public class UserAuthFilter implements Filter, WithVertx {
 		}
 		if (CookieHelper.getInstance().getSigned(SESSION_ID, request) != null) {
 			CookieHelper.set(SESSION_ID, "", 0l, request);
+			CookieHelper.set("authenticated", "", 0l, request);
 		}
 		request.response().setStatusCode(302);
 		request.response().putHeader("Location", location);
