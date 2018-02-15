@@ -79,7 +79,11 @@ public abstract class Server extends AbstractVerticle {
 		rm.getWithRegEx(prefix.replaceAll("\\/", "\\/") + "\\/public\\/.+", request -> {
 			final String path = absolutePath(request.path().substring(prefix.length() + 1));
 			if (dev) {
-				request.response().sendFile(path);
+				request.response().sendFile(path, ar -> {
+					if (ar.failed() && !request.response().ended()) {
+						Renders.notFound(request);
+					}
+				});
 			} else {
 				if (staticRessources.get(request.uri()) != null) {
 					StaticResource.serveRessource(request,
@@ -91,7 +95,11 @@ public abstract class Server extends AbstractVerticle {
 							staticRessources.put(request.uri(), lastModified);
 							StaticResource.serveRessource(request, path, lastModified, dev);
 						} else {
-							request.response().sendFile(path);
+							request.response().sendFile(path, ar -> {
+								if (ar.failed() && !request.response().ended()) {
+									Renders.notFound(request);
+								}
+							});
 						}
 					});
 				}
