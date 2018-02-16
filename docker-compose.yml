@@ -1,0 +1,8 @@
+gradle:
+  image: gradle:4.5-alpine
+  working_dir: /home/gradle/project
+  volumes:
+    - ./:/home/gradle/project
+    - ~/.m2:/home/gradle/.m2
+    - ~/.gradle:/home/gradle/.gradle
+

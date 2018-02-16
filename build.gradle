@@ -4,6 +4,13 @@ plugins {
   id 'maven-publish'
 }
 
+if (!hasProperty('odeUsername')) {
+  ext.odeUsername = ''
+}
+if (!hasProperty('odePassword')) {
+  ext.odePassword = ''
+}
+
 repositories {
   jcenter()
   maven {
@@ -61,6 +68,7 @@ publishing {
     mavenJava(MavenPublication) {
       from components.java
       groupId "${modowner}"
+      artifactId "${modname}"
     }
   }
 }
