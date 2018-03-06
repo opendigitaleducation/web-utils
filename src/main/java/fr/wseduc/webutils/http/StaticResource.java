@@ -70,7 +70,11 @@ public class StaticResource {
 		if (checkLastModified(request, resourceLastModified)) {
 			request.response().setStatusCode(304).end();
 		} else {
-			request.response().sendFile(ressourcePath);
+			request.response().sendFile(ressourcePath, ar -> {
+				if (ar.failed() && !request.response().ended()) {
+					Renders.notFound(request);
+				}
+			});
 		}
 	}
 
