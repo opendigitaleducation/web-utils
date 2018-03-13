@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
+import fr.wseduc.webutils.collections.JsonUtils;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -205,7 +206,7 @@ public class Renders {
 				if (t != null) {
 					try {
 						Writer writer = new StringWriter();
-						Map<String, Object> ctx = params.getMap();
+						Map<String, Object> ctx = JsonUtils.convertMap(params);
 						setLambdaTemplateRequest(request, ctx);
 						t.execute(ctx, writer);
 						handler.handle(writer);
