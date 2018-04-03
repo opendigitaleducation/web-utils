@@ -46,7 +46,7 @@ public class JsonUtils {
 			if (obj instanceof io.vertx.core.json.JsonObject) {
 				arr.add(convertMap((io.vertx.core.json.JsonObject) obj));
 			} else if (obj instanceof io.vertx.core.json.JsonArray) {
-				arr.add(convertList((JsonArray) obj));
+				arr.add(convertList((io.vertx.core.json.JsonArray) obj));
 			} else {
 				arr.add(obj);
 			}
