@@ -78,9 +78,11 @@ public class StartupUtils {
 					}
 				})
 				.putHeader("Content-Type", "application/json")
+				.exceptionHandler(exceptw -> log.error("Error sending widgets to appregistry : " + widgets, exceptw))
 				.end(widgets);
 			}
 		})
+		.exceptionHandler(except -> log.error("Error sending application to appregistry : " + s, except))
 		.putHeader("Content-Type", "application/json")
 		.end(s);
 	}

@@ -189,6 +189,7 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 		if (headers.size() > 0) {
 			payload.put("headers", headers);
 		}
+		req.exceptionHandler(e -> log.error("Error sending to gomail.", e));
 		req.end(payload.encode());
 	}
 
@@ -237,6 +238,7 @@ public class GoMailSender extends NotificationHelper implements EmailSender {
 			}
 		});
 		req.putHeader("authorization", basicAuthHeader);
+		req.exceptionHandler(except -> log.error("Exception when query hard bounce.", except));
 		req.end();
 	}
 }

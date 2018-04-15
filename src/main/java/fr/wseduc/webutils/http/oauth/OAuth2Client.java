@@ -150,6 +150,7 @@ public class OAuth2Client {
 		req.headers()
 			.add("Content-Type", "application/x-www-form-urlencoded")
 			.add("Accept", "application/json; charset=UTF-8");
+		req.exceptionHandler(except -> log.error("Error getting access token.", except));
 		req.end(body, "UTF-8");
 	}
 
@@ -185,6 +186,7 @@ public class OAuth2Client {
 		if (scope != null && !scope.trim().isEmpty()) {
 			body += "&scope=" + scope;
 		}
+		req.exceptionHandler(except -> log.error("Error getting client credentials token.", except));
 		req.end(body, "UTF-8");
 	}
 
@@ -270,6 +272,7 @@ public class OAuth2Client {
 		if (customHeaders != null) {
 			req.headers().addAll(customHeaders);
 		}
+		req.exceptionHandler(except -> log.error("Error sending protected resource.", except));
 		if (body != null) {
 			req.end(body);
 		} else {

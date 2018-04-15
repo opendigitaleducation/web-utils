@@ -136,6 +136,7 @@ public class SendInBlueSender extends NotificationHelper implements EmailSender 
 			}
 		});
 		req.putHeader("api-key", apiKey);
+		req.exceptionHandler(except -> log.error("Error when query hardbounce to sendinblue.", except));
 		req.end(payload.encode());
 	}
 
@@ -224,6 +225,7 @@ public class SendInBlueSender extends NotificationHelper implements EmailSender 
 			}
 			payload.put("bcc", bcc);
 		}
+		req.exceptionHandler(except -> log.error("Error sending to sendinblue.", except));
 		req.end(payload.encode());
 	}
 
