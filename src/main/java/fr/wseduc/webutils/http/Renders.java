@@ -199,7 +199,7 @@ public class Renders {
 	public void processTemplate(final HttpServerRequest request,
 			JsonObject p, String resourceName, Reader r, final Handler<Writer> handler) {
 		final JsonObject params = (p == null) ? new JsonObject() : p.copy();
-		getTemplate(request, resourceName, r, new Handler<Template>() {
+		getTemplate(request, resourceName, r, true, new Handler<Template>() {
 
 			@Override
 			public void handle(Template t) {
@@ -221,11 +221,38 @@ public class Renders {
 		});
 	}
 
+	public void processTemplate(final HttpServerRequest request,
+			JsonObject p, String resourceName, boolean escapeHTML, final Handler<String> handler) {
+		final JsonObject params = (p == null) ? new JsonObject() : p.copy();
+		getTemplate(request, resourceName, null, escapeHTML, new Handler<Template>() {
+
+			@Override
+			public void handle(Template t) {
+				if (t != null) {
+					try {
+						Writer writer = new StringWriter();
+						Map<String, Object> ctx = JsonUtils.convertMap(params);
+						setLambdaTemplateRequest(request, ctx);
+						t.execute(ctx, writer);
+						handler.handle(writer.toString());
+					} catch (Exception e) {
+						log.error(e.getMessage(), e);
+						handler.handle(null);
+					}
+				} else {
+					handler.handle(null);
+				}
+			}
+		});
+	}
+
 	private void getTemplate(HttpServerRequest request, String resourceName,
-			Reader r, final Handler<Template> handler) {
+			Reader r, boolean escapeHTML, final Handler<Template> handler) {
 		String path;
 		if (resourceName != null && r != null && !resourceName.trim().isEmpty()) {
 			Mustache.Compiler compiler = Mustache.compiler().defaultValue("");
+			if(!escapeHTML)
+				compiler = compiler.escapeHTML(escapeHTML);
 			handler.handle(compiler.compile(r));
 			return;
 		} else if (resourceName != null && !resourceName.trim().isEmpty()) {
@@ -246,6 +273,8 @@ public class Renders {
 				public void handle(AsyncResult<Buffer> ar) {
 					if (ar.succeeded()) {
 						Mustache.Compiler compiler = Mustache.compiler().defaultValue("");
+						if(!escapeHTML)
+							compiler = compiler.escapeHTML(escapeHTML);
 						Template template = compiler.compile(ar.result().toString("UTF-8"));
 						if("dev".equals(config.getString("mode"))) {
 							templates.put(p, template);
