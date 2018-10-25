@@ -34,7 +34,7 @@ import java.util.*;
 
 @SupportedAnnotationTypes({"fr.wseduc.security.SecuredAction", "fr.wseduc.bus.BusAddress",
 		"fr.wseduc.rs.Get", "fr.wseduc.rs.Post", "fr.wseduc.rs.Delete", "fr.wseduc.rs.Put",
-		"fr.wseduc.rs.ApiDoc", "fr.wseduc.rs.ApiPrefixDoc"})
+		"fr.wseduc.rs.Patch", "fr.wseduc.rs.ApiDoc", "fr.wseduc.rs.ApiPrefixDoc"})
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class ControllerAnnotationProcessor extends AbstractProcessor {
 
@@ -74,10 +74,11 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 			Put putAnnotation = element.getAnnotation(Put.class);
 			Get getAnnotation = element.getAnnotation(Get.class);
 			Post postAnnotation = element.getAnnotation(Post.class);
+			Patch patchAnnotation = element.getAnnotation(Patch.class);
 			TypeElement clazz = (TypeElement) element.getEnclosingElement();
 			if(annotation == null || !isMethod(element) || clazz == null ||
 					(deleteAnnotation == null && putAnnotation == null &&
-							getAnnotation == null && postAnnotation == null)) {
+							getAnnotation == null && postAnnotation == null && patchAnnotation == null)) {
 				continue;
 			}
 			String path;
@@ -91,9 +92,12 @@ public class ControllerAnnotationProcessor extends AbstractProcessor {
 			} else if (putAnnotation != null) {
 				path = putAnnotation.value();
 				method = "PUT";
-			} else {
+			} else if (deleteAnnotation != null) {
 				path = deleteAnnotation.value();
 				method = "DELETE";
+			} else (patchAnnotation != null) {
+				path = patchAnnotation.value();
+				method = "PATCH";
 			}
 
 			String notes = "";
