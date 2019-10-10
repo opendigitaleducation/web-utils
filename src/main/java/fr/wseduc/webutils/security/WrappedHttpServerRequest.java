@@ -52,6 +52,12 @@ public class WrappedHttpServerRequest implements HttpServerRequest {
 	}
 
 	@Override
+	public HttpServerRequest fetch(long amount) {
+		request.fetch(amount);
+		return this;
+	}
+
+	@Override
 	public HttpServerRequest endHandler(final Handler<Void> endHandler) {
 		if (end) {
 			if (endHandler != null) {
@@ -125,6 +131,11 @@ public class WrappedHttpServerRequest implements HttpServerRequest {
 	@Override
 	public String host() {
 		return request.host();
+	}
+
+	@Override
+	public long bytesRead() {
+		return request.bytesRead();
 	}
 
 	@Override
@@ -252,6 +263,12 @@ public class WrappedHttpServerRequest implements HttpServerRequest {
 	@Override
 	public HttpConnection connection() {
 		return request.connection();
+	}
+
+	@Override
+	public HttpServerRequest streamPriorityHandler(Handler<StreamPriority> handler) {
+		request.streamPriorityHandler(handler);
+		return this;
 	}
 
 }
