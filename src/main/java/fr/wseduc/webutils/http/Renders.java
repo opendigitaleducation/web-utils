@@ -76,7 +76,7 @@ public class Renders {
 
 	protected void setLambdaTemplateRequest(final HttpServerRequest request)
 	{
-		String host = Renders.getIp(request);
+		String host = Renders.getHost(request);
 		this.templateProcessor.setLambda("i18n",
 			new I18nLambda(I18n.acceptLanguage(request), host));
 		this.templateProcessor.setLambda("static",
