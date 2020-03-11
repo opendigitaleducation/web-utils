@@ -16,6 +16,7 @@
 
 package fr.wseduc.webutils.security.oauth;
 
+import fr.wseduc.webutils.DefaultAsyncResult;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
@@ -34,6 +35,26 @@ public class DefaultOAuthResourceProvider implements OAuthResourceProvider {
 		this.eb = eb;
 	}
 
+	protected void getOAuthInfos(final SecureHttpServerRequest request, final JsonObject payload, final Handler<AsyncResult<JsonObject>> handler){
+		eb.send(OAUTH_ADDRESS, payload, new Handler<AsyncResult<Message<JsonObject>>>() {
+
+			@Override
+			public void handle(AsyncResult<Message<JsonObject>> event) {
+				if (event.succeeded()) {
+					Message<JsonObject> res = event.result();
+					request.resume();
+					if ("ok".equals(res.body().getString("status"))) {
+						handler.handle(new DefaultAsyncResult<>(res.body()));
+					} else {
+						handler.handle(new DefaultAsyncResult<>(new Exception("Failed to authenticate")));
+					}
+				} else {
+					handler.handle(new DefaultAsyncResult<>(event.cause()));
+				}
+			}
+		});
+	}
+
 	@Override
 	public void validToken(final SecureHttpServerRequest request, final Handler<Boolean> handler) {
 		JsonObject headers = new JsonObject();
@@ -48,25 +69,15 @@ public class DefaultOAuthResourceProvider implements OAuthResourceProvider {
 		.put("headers", headers)
 		.put("params", params);
 		request.pause();
-		eb.send(OAUTH_ADDRESS, json, new Handler<AsyncResult<Message<JsonObject>>>() {
-
-			@Override
-			public void handle(AsyncResult<Message<JsonObject>> event) {
-				if (event.succeeded()) {
-					Message<JsonObject> res = event.result();
-					request.resume();
-					if ("ok".equals(res.body().getString("status"))) {
-						request.setAttribute("client_id", res.body().getString("client_id"));
-						request.setAttribute("remote_user", res.body().getString("remote_user"));
-						request.setAttribute("scope", res.body().getString("scope"));
-						request.setAttribute("authorization_type", "Bearer");
-						handler.handle(customValidation(request));
-					} else {
-						handler.handle(false);
-					}
-				} else {
-					handler.handle(false);
-				}
+		getOAuthInfos(request, json, res->{
+			if(res.succeeded()){
+				request.setAttribute("client_id", res.result().getString("client_id"));
+				request.setAttribute("remote_user", res.result().getString("remote_user"));
+				request.setAttribute("scope", res.result().getString("scope"));
+				request.setAttribute("authorization_type", "Bearer");
+				handler.handle(customValidation(request));
+			}else{
+				handler.handle(false);
 			}
 		});
 	}
