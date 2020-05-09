@@ -194,7 +194,7 @@ public abstract class NotificationHelper implements SendEmail {
 		if (request == null) {
 			return host;
 		}
-		return Renders.getScheme(request) + "://" + request.headers().get("Host");
+		return Renders.getScheme(request) + "://" + Renders.getHost(request);
 	}
 
 }

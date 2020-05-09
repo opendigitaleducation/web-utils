@@ -50,6 +50,7 @@ public class Renders {
 	protected JsonObject config;
 	protected String staticHost;
 	protected TemplateProcessor templateProcessor;
+	protected static final List<String> allowedHosts = new ArrayList<>();
 
 	public Renders(Vertx vertx, JsonObject config) {
 		this.config = config;
@@ -347,10 +348,17 @@ public class Renders {
 
 	public static String getHost(HttpServerRequest request) {
 		String host = request.headers().get("X-Forwarded-Host");
-		if (host != null && !host.trim().isEmpty()) {
-			return host;
+		if (host == null || host.trim().isEmpty()) {
+			host = request.headers().get("Host");
 		}
-		return request.headers().get("Host");
+		if (!allowedHosts.isEmpty()) {
+			if (allowedHosts.contains(host)) {
+				return host;
+			} else {
+				return allowedHosts.get(0);
+			}
+		}
+		return host;
 	}
 
 	public static String getIp(HttpServerRequest request) {
@@ -366,6 +374,10 @@ public class Renders {
 			this.hookRenderProcess = new ArrayList<>();
 		}
 		this.hookRenderProcess.add(hookRenderProcess);
+	}
+
+	public static List<String> getAllowedHosts() {
+		return allowedHosts;
 	}
 
 }
