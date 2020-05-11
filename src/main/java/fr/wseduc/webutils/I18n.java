@@ -211,7 +211,8 @@ public class I18n {
 	}
 
 	public void add(String domain, Locale locale, JsonObject keys, Boolean byTheme) {
-		Map<Locale, JsonObject> messages = messagesByDomains.get(domain);
+		Map<Locale, JsonObject> messages = byTheme ?
+				messagesByThemes.getOrDefault(domain, messagesByDomains.get(domain)) : messagesByDomains.get(domain);
 		if (messages == null) {
 			HashMap<Locale, JsonObject> defaultMessages = (HashMap<Locale, JsonObject>)
 					messagesByDomains.get(DEFAULT_DOMAIN);
